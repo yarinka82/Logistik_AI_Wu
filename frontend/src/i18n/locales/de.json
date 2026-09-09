@@ -1,0 +1,36 @@
+
+{
+  "auth": {
+    "emailOrUsername": "E-Mail oder Benutzername",
+    "registerTitle": "Konto erstellen",
+    "registerLede": "Wählen Sie Ihre Rolle und legen Sie Ihr Konto an.",
+    "registerError": "Registrierung fehlgeschlagen. Bitte Daten prüfen.",
+    "username": "Benutzername",
+    "companyName": "Firmenname",
+    "edrpou": "USt-IdNr. / Handelsregisternummer",
+    "fullName": "Vollständiger Name",
+    "licenseNumber": "Führerscheinnummer",
+    "haveAccount": "Schon ein Konto? Zu „Anmelden“ wechseln.",
+    "tabLogin": "Anmelden",
+    "tabRegister": "Registrieren",
+    "welcomeBack": "Willkommen zurück",
+    "loginLede": "Melden Sie sich an, um Ihre Aufträge und Status zu sehen.",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "login": "Anmelden",
+    "loginError": "Login fehlgeschlagen. Bitte Daten prüfen.",
+    "noAccount": "Noch kein Konto? Rolle oben wählen und zu „Registrieren“ wechseln.",
+    "heroTitle": "Ein Transportauftrag zeigt seine Route, bevor ein Fahrer auf „Übernehmen“ tippt.",
+    "heroSubtitle": "Der Marktplatz für Firmen, Privatkunden und Frachtführer in ganz Deutschland — mit Statusverfolgung in Echtzeit.",
+    "statsRequests": "aktive Aufträge",
+    "statsDrivers": "Fahrer online",
+    "statsCoverage": "Länder Abdeckung",
+    "roles": {
+      "client_company": "Firma",
+      "client_individual": "Privatkunde",
+      "driver": "Fahrer",
+      "accountant": "Buchhalter",
+      "admin": "Administrator"
+    }
+  }
+}

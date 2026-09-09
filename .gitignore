@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ==========================================
+# Frontend (Node, React, Vite, Build artifacts)
+# ==========================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env*.local
+.eslintcache
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
