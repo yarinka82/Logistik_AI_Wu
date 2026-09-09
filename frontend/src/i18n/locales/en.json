@@ -1,0 +1,36 @@
+
+{
+  "auth": {
+    "emailOrUsername": "Email or Username",
+    "registerTitle": "Create an Account",
+    "registerLede": "Choose your role and set up your account.",
+    "registerError": "Registration failed. Please check your data.",
+    "username": "Username",
+    "companyName": "Company Name",
+    "edrpou": "VAT ID / Trade Register Number",
+    "fullName": "Full Name",
+    "licenseNumber": "Driver’s License Number",
+    "haveAccount": "Already have an account? Switch to “Sign In”.",
+    "tabLogin": "Log in",
+    "tabRegister": "Register",
+    "welcomeBack": "Welcome back",
+    "loginLede": "Log in to see your orders and their status.",
+    "email": "Email",
+    "password": "Password",
+    "login": "Log in",
+    "loginError": "Login failed. Please check your credentials.",
+    "noAccount": "No account yet? Pick a role above and switch to \"Register\".",
+    "heroTitle": "A shipment order shows its route before a driver taps \"Accept\".",
+    "heroSubtitle": "The marketplace for companies, private clients and carriers across Germany — with real-time status tracking.",
+    "statsRequests": "active orders",
+    "statsDrivers": "drivers online",
+    "statsCoverage": "countries covered",
+    "roles": {
+      "client_company": "Company",
+      "client_individual": "Private client",
+      "driver": "Driver",
+      "accountant": "Accountant",
+      "admin": "Administrator"
+    }
+  }
+}
