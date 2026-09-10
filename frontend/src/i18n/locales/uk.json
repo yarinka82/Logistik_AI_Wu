@@ -1,6 +1,19 @@
 
 {
   "auth": {
+    "forgotPasswordLink": "Забули пароль?",
+    "forgotPasswordTitle": "Відновлення пароля",
+    "forgotPasswordDesc": "Введіть ваш зареєстрований email, і ми надішлемо вам посилання для зміни пароля.",
+    "forgotPasswordSentDesc": "Якщо такий email зареєстрований, ми надіслали інструкції.",
+    "sendResetLink": "Надіслати посилання",
+    "resetEmailSent": "Посилання для зміни пароля надіслано!",
+    "resetEmailError": "Помилка відправлення запиту",
+    "backToLogin": "Повернутися до входу",
+    "setNewPasswordTitle": "Встановлення нового пароля",
+    "setNewPasswordDesc": "Введіть новий надійний пароль для вашого акаунту",
+    "saveNewPasswordBtn": "Зберегти новий пароль",
+    "passwordResetSuccess": "Пароль успішно змінено! Увійдіть з новим паролем.",
+    "passwordResetError": "Посилання недійсне або термін його дії минув.",
     "logout": "Вийти",
     "emailOrUsername": "Email або ім’я користувача",
     "registerTitle": "Створити обліковий запис",
@@ -48,6 +61,7 @@
   "phone": "Телефон",
   "saveError": "Помилка збереження",
   "title": "Особисті дані",
+  "sending": "Надсилання...",
   "saveSuccess": "Дані профілю успішно збережено!",
   "securityTitle": "Безпека та зміна пароля",
   "securityDesc": "Введіть поточний пароль для встановлення нового",
