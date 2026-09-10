@@ -1,5 +1,18 @@
 {
   "auth": {
+    "forgotPasswordLink": "Passwort vergessen?",
+    "forgotPasswordTitle": "Passwort zurücksetzen",
+    "forgotPasswordDesc": "Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen zu erhalten.",
+    "forgotPasswordSentDesc": "Wenn diese E-Mail registriert ist, haben wir einen Link gesendet.",
+    "sendResetLink": "Link senden",
+    "resetEmailSent": "Link zum Zurücksetzen wurde gesendet!",
+    "resetEmailError": "Fehler beim Senden der Anfrage",
+    "backToLogin": "Zurück zur Anmeldung",
+    "setNewPasswordTitle": "Neues Passwort festlegen",
+    "setNewPasswordDesc": "Geben Sie ein neues sicheres Passwort für Ihr Konto ein",
+    "saveNewPasswordBtn": "Neues Passwort speichern",
+    "passwordResetSuccess": "Passwort erfolgreich geändert! Bitte melden Sie sich an.",
+    "passwordResetError": "Der Link ist ungültig oder abgelaufen.",
     "logout": "Abmelden",
     "emailOrUsername": "E-Mail oder Benutzername",
     "registerTitle": "Konto erstellen",
@@ -59,7 +72,8 @@
   },
   "common": {
     "saving": "Wird gespeichert...",
-    "save": "Änderungen speichern"
+    "save": "Änderungen speichern",
+    "sending": "Senden..."
   }
 
 }

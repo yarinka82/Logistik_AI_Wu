@@ -4,6 +4,9 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordConfirmPage } from "./pages/ResetPasswordConfirmPage";
+
 import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
 
@@ -16,6 +19,8 @@ export default function App() {
         <Routes>
           {/* Публичные страницы*/}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:uid/:token" element={<ResetPasswordConfirmPage />} />
 
           {/* Защищенные страницы внутри MainLayout */}
           <Route

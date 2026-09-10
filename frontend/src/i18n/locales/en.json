@@ -1,5 +1,18 @@
 {
   "auth": {
+    "forgotPasswordLink": "Forgot password?",
+    "forgotPasswordTitle": "Reset Password",
+    "forgotPasswordDesc": "Enter your registered email address to receive a password reset link.",
+    "forgotPasswordSentDesc": "If this email is registered, we have sent instructions.",
+    "sendResetLink": "Send reset link",
+    "resetEmailSent": "Reset link has been sent to your email!",
+    "resetEmailError": "Failed to send reset request",
+    "backToLogin": "Back to login",
+    "setNewPasswordTitle": "Set New Password",
+    "setNewPasswordDesc": "Enter a new secure password for your account",
+    "saveNewPasswordBtn": "Save new password",
+    "passwordResetSuccess": "Password successfully reset! Please sign in.",
+    "passwordResetError": "The reset link is invalid or has expired.",
     "logout": "Log out",
     "emailOrUsername": "Email or Username",
     "registerTitle": "Create an Account",
@@ -58,7 +71,8 @@
   },
   "common": {
     "saving": "Saving...",
-    "save": "Save changes"
+    "save": "Save changes",
+    "sending": "Sending..."
   }
 
 }

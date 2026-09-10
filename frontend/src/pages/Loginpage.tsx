@@ -1,6 +1,6 @@
 
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -300,6 +300,15 @@ export function LoginPage() {
                   {showPassword ? "🙈" : "👁"}
                 </button>
               </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+              <Link
+                to="/forgot-password"
+                style={{ color: "#00d2b4", fontSize: "12px", textDecoration: "none" }}
+              >
+                {t("auth.forgotPasswordLink", "Забули пароль?")}
+              </Link>
             </div>
 
             {/* Поле: Подтверждение пароля (только при регистрации) */}
