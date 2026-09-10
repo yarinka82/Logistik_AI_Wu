@@ -1,6 +1,6 @@
-
 {
   "auth": {
+    "logout": "Abmelden",
     "emailOrUsername": "E-Mail oder Benutzername",
     "registerTitle": "Konto erstellen",
     "registerLede": "Wählen Sie Ihre Rolle und legen Sie Ihr Konto an.",
@@ -31,6 +31,16 @@
       "driver": "Fahrer",
       "accountant": "Buchhalter",
       "admin": "Administrator"
-    }
-  }
+    },
+    "confirmPassword": "Passwort bestätigen",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein",
+    "loginSuccess": "Erfolgreich angemeldet!",
+    "registerSuccess": "Konto erfolgreich erstellt!"
+
+  },
+"dashboard": {
+  "systemActive": "Frachtsystem aktiv",
+  "welcome": "Willkommen im Portal",
+  "heroDesc": "Die zentrale Plattform für Straßengüterverkehr in Deutschland und Europa."
+}
 }

@@ -1,9 +1,11 @@
 
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { Role, type RegisterPayload } from "../auth/types";
+import { toast } from "../components/Notifier"; // Укажите актуальный путь к вашему Notifier.tsx
 import "./LoginPage.css";
 
 const ROLE_ORDER: Role[] = [Role.ClientCompany, Role.ClientIndividual, Role.Driver];
@@ -21,7 +23,10 @@ export function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [username, setUsername] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [edrpou, setEdrpou] = useState("");
@@ -31,13 +36,30 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const handleTabChange = (nextTab: Tab) => {
+    setTab(nextTab);
+    setError(null);
+    setPassword("");
+    setConfirmPassword("");
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Валидация совпадения паролей при регистрации
+    if (tab === "register" && password !== confirmPassword) {
+      const mismatchMsg = t("auth.passwordMismatch", "Паролі не збігаються");
+      setError(mismatchMsg);
+      toast.warning(mismatchMsg);
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (tab === "login") {
         await login({ email, password });
+        toast.success(t("auth.loginSuccess", "Успішний вхід!"));
       } else {
         const payload: RegisterPayload = {
           email,
@@ -49,13 +71,37 @@ export function LoginPage() {
           ...(role === Role.Driver && { full_name: fullName, driver_license_number: licenseNumber }),
         };
         await register(payload);
+        toast.success(t("auth.registerSuccess", "Реєстрація успішна!"));
       }
       navigate("/");
-    } catch {
-      setError(tab === "login" ? t("auth.loginError") : t("auth.registerError"));
-    } finally {
-      setSubmitting(false);
-    }
+      } catch (err: unknown) {
+        let errMsg =
+          tab === "login"
+            ? t("auth.loginError", "Помилка входу")
+            : t("auth.registerError", "Помилка реєстрації");
+
+        // Безопасно проверяем, что это ошибка Axios
+        if (isAxiosError(err) && err.response?.data) {
+          const data = err.response.data;
+
+          if (typeof data === "string") {
+            errMsg = data;
+          } else if (typeof data === "object" && data !== null) {
+            if ("detail" in data && typeof data.detail === "string") {
+              errMsg = data.detail;
+            } else {
+              errMsg = Object.values(data).flat().join(" ");
+            }
+          }
+        } else if (err instanceof Error) {
+          errMsg = err.message;
+        }
+
+        setError(errMsg);
+        toast.error(errMsg);
+      } finally {
+        setSubmitting(false);
+      }
   };
 
   return (
@@ -124,10 +170,10 @@ export function LoginPage() {
       <div className="form-panel">
         <div className="form-wrap">
           <div className="tabs">
-            <div className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>
+            <div className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => handleTabChange("login")}>
               {t("auth.tabLogin")}
             </div>
-            <div className={`tab ${tab === "register" ? "active" : ""}`} onClick={() => setTab("register")}>
+            <div className={`tab ${tab === "register" ? "active" : ""}`} onClick={() => handleTabChange("register")}>
               {t("auth.tabRegister")}
             </div>
           </div>
@@ -136,8 +182,7 @@ export function LoginPage() {
             <h2>{tab === "login" ? t("auth.welcomeBack") : t("auth.registerTitle")}</h2>
             <p className="lede">{tab === "login" ? t("auth.loginLede") : t("auth.registerLede")}</p>
 
-            {/* ROLE SELECTION: displayed ONLY during registration */}
-
+            {/* Выбор роли (только при регистрации) */}
             {tab === "register" && (
               <div className="role-row">
                 {ROLE_ORDER.map((r) => (
@@ -152,30 +197,49 @@ export function LoginPage() {
               </div>
             )}
 
-            {tab === "register" && (
-              <div className="field">
-                <label>{t("auth.username")}</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-            )}
+          {/* Username — только при регистрации */}
+          {tab === "register" && (
+            <div className="field">
+              <label>{t("auth.username")}</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </div>
+          )}
 
+          {/* Email — только при регистрации */}
+          {tab === "register" && (
+            <div className="field">
+              <label>{t("auth.email")}</label>
+              <input
+                type="email"
+                placeholder="sie@firma.de"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </div>
+          )}
+
+          {/* Email or Username — только при логине */}
+          {tab === "login" && (
             <div className="field">
               <label>{t("auth.emailOrUsername")}</label>
               <input
                 type="text"
-                placeholder={tab === "login" ? "email@example.com або username" : "sie@firma.de"}
+                placeholder="email@example.com або username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete={tab === "login" ? "username" : "email"}
+                autoComplete="username"
                 required
               />
             </div>
+          )}
 
             {tab === "register" && role === Role.ClientCompany && (
               <>
@@ -215,6 +279,7 @@ export function LoginPage() {
               </>
             )}
 
+            {/* Поле: Пароль */}
             <div className="field">
               <label>{t("auth.password")}</label>
               <div className="password-wrap">
@@ -237,6 +302,31 @@ export function LoginPage() {
               </div>
             </div>
 
+            {/* Поле: Подтверждение пароля (только при регистрации) */}
+            {tab === "register" && (
+              <div className="field">
+                <label>{t("auth.confirmPassword", "Підтвердження пароля")}</label>
+                <div className="password-wrap">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="eye-btn"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    aria-label={showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                  >
+                    {showConfirmPassword ? "🙈" : "👁"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {error && <p className="form-error">{error}</p>}
 
             <button className="submit-btn" type="submit" disabled={submitting}>
@@ -244,11 +334,11 @@ export function LoginPage() {
             </button>
 
             {tab === "login" ? (
-              <p className="fine-print" onClick={() => setTab("register")} style={{ cursor: "pointer" }}>
+              <p className="fine-print" onClick={() => handleTabChange("register")} style={{ cursor: "pointer" }}>
                 {t("auth.noAccount")}
               </p>
             ) : (
-              <p className="fine-print" onClick={() => setTab("login")} style={{ cursor: "pointer" }}>
+              <p className="fine-print" onClick={() => handleTabChange("login")} style={{ cursor: "pointer" }}>
                 {t("auth.haveAccount")}
               </p>
             )}

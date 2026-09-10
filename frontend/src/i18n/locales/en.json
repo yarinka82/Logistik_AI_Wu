@@ -1,6 +1,6 @@
-
 {
   "auth": {
+    "logout": "Log out",
     "emailOrUsername": "Email or Username",
     "registerTitle": "Create an Account",
     "registerLede": "Choose your role and set up your account.",
@@ -30,7 +30,16 @@
       "client_individual": "Private client",
       "driver": "Driver",
       "accountant": "Accountant",
-      "admin": "Administrator"
-    }
-  }
+      "admin": "Administrator",
+      "confirmPassword": "Confirm Password"},
+    "passwordMismatch": "Passwords do not match",
+    "loginSuccess": "Successfully logged in!",
+    "registerSuccess": "Account successfully created!"
+  },
+"dashboard": {
+  "systemActive": "Freight System Active",
+  "welcome": "Welcome to Dashboard",
+  "heroDesc": "All-in-one platform for road freight transportation across Germany and Europe."
+}
+
 }
