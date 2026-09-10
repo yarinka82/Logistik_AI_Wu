@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
-import {DashboardPage} from "./pages/DashboardPage.tsx";
-
-
 
 export default function App() {
   return (
@@ -14,15 +14,21 @@ export default function App() {
         <Notifier />
 
         <Routes>
+          {/* Публичные страницы*/}
           <Route path="/login" element={<LoginPage />} />
+
+          {/* Защищенные страницы внутри MainLayout */}
           <Route
-            path="/"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <MainLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

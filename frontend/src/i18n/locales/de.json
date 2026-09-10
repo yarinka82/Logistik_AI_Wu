@@ -36,11 +36,30 @@
     "passwordMismatch": "Die Passwörter stimmen nicht überein",
     "loginSuccess": "Erfolgreich angemeldet!",
     "registerSuccess": "Konto erfolgreich erstellt!"
-
   },
-"dashboard": {
-  "systemActive": "Frachtsystem aktiv",
-  "welcome": "Willkommen im Portal",
-  "heroDesc": "Die zentrale Plattform für Straßengüterverkehr in Deutschland und Europa."
-}
+  "dashboard": {
+    "systemActive": "Frachtsystem aktiv",
+    "welcome": "Willkommen im Portal",
+    "heroDesc": "Die zentrale Plattform für Straßengüterverkehr in Deutschland und Europa."
+ },
+  "profile": {
+    "title": "Persönliche Daten",
+    "subtitle": "Verwalten Sie Ihre Kontakt- und Kontodaten",
+    "phone": "Telefonnummer",
+    "saveSuccess": "Profildaten erfolgreich gespeichert!",
+    "securityTitle": "Sicherheit & Passwort ändern",
+    "securityDesc": "Geben Sie Ihr aktuelles Passwort ein, um ein neues festzulegen",
+    "oldPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmNewPassword": "Neues Passwort bestätigen",
+    "updatePasswordBtn": "Passwort aktualisieren",
+    "passwordSuccess": "Passwort erfolgreich geändert!",
+    "passwordError": "Passwort konnte nicht geändert werden. Prüfen Sie das alte Passwort.",
+    "saveError": "Fehler beim Speichern"
+  },
+  "common": {
+    "saving": "Wird gespeichert...",
+    "save": "Änderungen speichern"
+  }
+
 }

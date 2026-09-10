@@ -36,10 +36,29 @@
     "loginSuccess": "Successfully logged in!",
     "registerSuccess": "Account successfully created!"
   },
-"dashboard": {
-  "systemActive": "Freight System Active",
-  "welcome": "Welcome to Dashboard",
-  "heroDesc": "All-in-one platform for road freight transportation across Germany and Europe."
-}
+  "dashboard": {
+    "systemActive": "Freight System Active",
+    "welcome": "Welcome to Dashboard",
+    "heroDesc": "All-in-one platform for road freight transportation across Germany and Europe."
+    },
+  "profile": {
+    "subtitle": "Manage your contact and account information",
+    "title": "Personal Information",
+    "phone": "Phone number",
+    "saveSuccess": "Profile details successfully saved!",
+    "saveError": "Failed to save profile details",
+    "securityTitle": "Security & Change Password",
+    "securityDesc": "Enter your current password to set a new one",
+    "oldPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "updatePasswordBtn": "Update Password",
+    "passwordSuccess": "Password successfully updated!",
+    "passwordError": "Failed to update password. Please check your current password."
+  },
+  "common": {
+    "saving": "Saving...",
+    "save": "Save changes"
+  }
 
 }
