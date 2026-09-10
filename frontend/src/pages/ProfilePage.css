@@ -1,0 +1,147 @@
+
+.profile-container {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.profile-card {
+  background-color: #161b22;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.profile-title {
+  margin: 0 0 6px 0;
+  fontSize: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.profile-subtitle {
+  color: #8b949e;
+  font-size: 13px;
+  margin: 0 0 20px 0;
+  line-height: 1.4;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: #c9d1d9;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-label.muted {
+  color: #8b949e;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #0d1117;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #00d2b4;
+  box-shadow: 0 0 0 3px rgba(0, 210, 180, 0.15);
+}
+
+.form-input:disabled {
+  color: #8b949e;
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: #0d1117;
+  cursor: not-allowed;
+}
+
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-wrap .form-input {
+  padding-right: 44px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  user-select: none;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.eye-btn:hover {
+  opacity: 1;
+}
+
+.btn-submit {
+  margin-top: 8px;
+  padding: 11px;
+  background-color: #00d2b4;
+  border: none;
+  border-radius: 8px;
+  color: #0d1117;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background-color: #00bca2;
+}
+
+.btn-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-submit-success {
+  background-color: #238636;
+  color: #ffffff;
+}
+
+.btn-submit-success:hover:not(:disabled) {
+  background-color: #2ea043;
+}
