@@ -1,12 +1,12 @@
 
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { Role, type RegisterPayload } from "../auth/types";
 import { toast } from "../components/Notifier";
 import { AuthLayout } from "./AuthLayout";
+import { extractErrorMessage } from "../api/errors.ts";
 
 const ROLE_ORDER: Role[] = [Role.ClientCompany, Role.ClientIndividual, Role.Driver];
 
@@ -56,27 +56,12 @@ export function RegisterPage() {
       await register(payload);
       toast.success(t("auth.registerSuccess", "Реєстрація успішна!"));
       navigate("/");
-    } catch (err: unknown) {
-      let errMsg = t("auth.registerError", "Помилка реєстрації");
-
-      if (isAxiosError(err) && err.response?.data) {
-        const data = err.response.data;
-        if (typeof data === "string") {
-          errMsg = data;
-        } else if (typeof data === "object" && data !== null) {
-          errMsg = "detail" in data && typeof data.detail === "string"
-            ? data.detail
-            : Object.values(data).flat().join(" ");
-        }
-      } else if (err instanceof Error) {
-        errMsg = err.message;
+      } catch (err: unknown) {
+        const errMsg = extractErrorMessage(err, t("auth.registerError", "Помилка реєстрації"));
+        setError(errMsg);
+        toast.error(errMsg);
       }
 
-      setError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   return (

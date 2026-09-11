@@ -1,13 +1,11 @@
 
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "../components/Notifier";
 import { AuthLayout } from "./AuthLayout";
-
-
+import { extractErrorMessage } from "../api/errors";
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -29,21 +27,7 @@ export function LoginPage() {
       toast.success(t("auth.loginSuccess", "Успішний вхід!"));
       navigate("/");
     } catch (err: unknown) {
-      let errMsg = t("auth.loginError", "Помилка входу");
-
-      if (isAxiosError(err) && err.response?.data) {
-        const data = err.response.data;
-        if (typeof data === "string") {
-          errMsg = data;
-        } else if (typeof data === "object" && data !== null) {
-          errMsg = "detail" in data && typeof data.detail === "string"
-            ? data.detail
-            : Object.values(data).flat().join(" ");
-        }
-      } else if (err instanceof Error) {
-        errMsg = err.message;
-      }
-
+      const errMsg = extractErrorMessage(err, t("auth.loginError", "Помилка входу"));
       setError(errMsg);
       toast.error(errMsg);
     } finally {
