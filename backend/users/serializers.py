@@ -18,7 +18,7 @@ from .models import (
 
 
 class LoginSerializer(serializers.Serializer):
-    # Принимает email, username или email_or_username для совместимости с фронтендом
+    # Accepts email, username or email_or_username for frontend compatibility
     email_or_username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.CharField(required=False, allow_blank=True)
     username = serializers.CharField(required=False, allow_blank=True)
@@ -49,7 +49,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     username = serializers.CharField(required=True)
 
-    # Дополнительные поля профилей
+    # Additional profile fields
     company_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
     edrpou = serializers.CharField(required=False, allow_blank=True, write_only=True)
     full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
@@ -70,7 +70,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def validate_email(self, value):
-        # Приводим email к нижнему регистру и проверяем уникальность
+        # We bring the email to lowercase and check the uniqueness
         norm_email = value.lower().strip()
         if User.objects.filter(email__iexact=norm_email).exists():
             raise serializers.ValidationError(_("Ein Benutzer mit dieser E-Mail existiert bereits."))
@@ -85,14 +85,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         role = attrs.get("role")
 
-        # 1. Проверка публичных ролей
+        # 1. Verification of public roles
         if role not in self.PUBLIC_ROLES:
             raise serializers.ValidationError(
                 {"role": _("Diese Rolle kann nicht über die öffentliche Registrierung angelegt werden.")},
                 code="role_not_public",
             )
 
-        # 2. Проверка полей конкретных ролей
+        # 2. Checking the fields of specific roles
         if role == User.Role.CLIENT_COMPANY and not attrs.get("company_name"):
             raise serializers.ValidationError(
                 {"company_name": _("Firmenname ist für die Rolle „client_company“ erforderlich.")},
@@ -117,7 +117,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                     code="license_required",
                 )
 
-        # 3. Валидация надежности пароля
+        # 3. Validating password strength
         temp_user = User(
             email=attrs.get("email"),
             username=attrs.get("username"),
@@ -139,7 +139,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
         password = validated_data.pop("password")
 
-        # Атомарное создание пользователя и профиля в одной транзакции
+        # Atomic user and profile creation in one transaction
         with transaction.atomic():
             user = User(**validated_data)
             user.set_password(password)

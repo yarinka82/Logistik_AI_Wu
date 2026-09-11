@@ -35,7 +35,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  // 1. Устраняем каскадный ререндер: проверяем наличие токена сразу при создании стейта
+  // 1. Eliminate cascade rerendering: check for the presence of a token immediately when creating a state
   const [loading, setLoading] = useState<boolean>(() => Boolean(localStorage.getItem("access")));
 
   const logout = (): void => {
@@ -44,49 +44,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const api = useMemo<AxiosInstance>(() => {
-    const instance = axios.create({ baseURL: API_BASE });
+const api = useMemo<AxiosInstance>(() => {
+  const instance = axios.create({ baseURL: API_BASE });
 
-    instance.interceptors.request.use((config) => {
-      const access = localStorage.getItem("access");
-      if (access && config.headers) {
-        config.headers.Authorization = `Bearer ${access}`;
-      }
-      return config;
-    });
+  instance.interceptors.request.use((config) => {
+    const access = localStorage.getItem("access");
+    if (access && config.headers) {
+      config.headers.Authorization = `Bearer ${access}`;
+    }
+    return config;
+  });
 
-    instance.interceptors.response.use(
-      (response) => response,
-      async (error: AxiosError) => {
-        const originalRequest = error.config as RetryableRequestConfig | undefined;
-        const refresh = localStorage.getItem("refresh");
+  // General promise for all parallel refreshes - race excluded
+  let refreshPromise: Promise<string> | null = null;
 
-        if (
-          error.response?.status === 401 &&
-          refresh &&
-          originalRequest &&
-          !originalRequest._retry
-        ) {
-          originalRequest._retry = true;
-          try {
-            const { data } = await axios.post<TokenPair>(`${API_BASE}/token/refresh/`, {
-              refresh,
-            });
-            localStorage.setItem("access", data.access);
-            originalRequest.headers = originalRequest.headers ?? {};
-            originalRequest.headers.Authorization = `Bearer ${data.access}`;
-            return instance(originalRequest);
-          } catch {
-            logout();
-          }
+  const performRefresh = (): Promise<string> => {
+    if (!refreshPromise) {
+      const refresh = localStorage.getItem("refresh");
+      refreshPromise = axios
+        .post<TokenPair>(`${API_BASE}/token/refresh/`, { refresh })
+        .then(({ data }) => {
+          localStorage.setItem("access", data.access);
+          return data.access;
+        })
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+    return refreshPromise;
+  };
+
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error: AxiosError) => {
+      const originalRequest = error.config as RetryableRequestConfig | undefined;
+      const refresh = localStorage.getItem("refresh");
+
+      if (
+        error.response?.status === 401 &&
+        refresh &&
+        originalRequest &&
+        !originalRequest._retry
+      ) {
+        originalRequest._retry = true;
+        try {
+          const newAccess = await performRefresh();
+          originalRequest.headers = originalRequest.headers ?? {};
+          originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+          return instance(originalRequest);
+        } catch {
+          logout();
         }
-        return Promise.reject(error);
       }
-    );
+      return Promise.reject(error);
+    }
+  );
 
-    return instance;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  return instance;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
 
 
