@@ -177,6 +177,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "email", "username", "phone", "role", "is_verified", "profile_data"]
+        read_only_fields = ["id", "email", "username", "role", "is_verified"]
 
     def get_profile_data(self, obj):
         if obj.role == User.Role.CLIENT_COMPANY and hasattr(obj, "company_profile"):

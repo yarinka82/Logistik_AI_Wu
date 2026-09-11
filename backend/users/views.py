@@ -88,13 +88,12 @@ class CustomTokenView(TokenObtainPairView):
     serializer_class = CustomTokenSerializer
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
-    
     
     
 class ChangePasswordView(APIView):

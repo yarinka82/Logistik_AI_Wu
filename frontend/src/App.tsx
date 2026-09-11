@@ -2,16 +2,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Role } from "./auth/types";
-import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AccountantPage } from "./pages/AccountantPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordConfirmPage } from "./pages/ResetPasswordConfirmPage";
-
+import { LoginPage } from "./pages/LoginPage";
 import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
+
 
 export default function App() {
   return (

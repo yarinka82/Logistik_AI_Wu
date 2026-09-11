@@ -5,17 +5,18 @@ import {
   useContext,
   useState,
   useEffect,
-  useMemo,
-  type ReactNode, useCallback,
+  useCallback,
+  useRef,
+  type ReactNode,
 } from "react";
 import axios, {
   type AxiosInstance,
   type AxiosError,
   type InternalAxiosRequestConfig,
 } from "axios";
-import type { User, LoginPayload, RegisterPayload, TokenPair } from "./types";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/auth";
+import type { User, LoginPayload, RegisterPayload } from "./types";
+import { loginRequest, registerRequest, refreshTokenRequest, fetchMeRequest } from "../api/auth";
+import { API_BASE } from "../api/client";
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -34,9 +35,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-
-  // 1. Eliminate cascade rerendering: check for the presence of a token immediately when creating a state
   const [loading, setLoading] = useState<boolean>(() => Boolean(localStorage.getItem("access")));
+
+  const refreshPromiseRef = useRef<Promise<string> | null>(null);
+
+  const [api] = useState<AxiosInstance>(() => axios.create({ baseURL: API_BASE }));
 
   const logout = (): void => {
     localStorage.removeItem("access");
@@ -44,114 +47,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-const api = useMemo<AxiosInstance>(() => {
-  const instance = axios.create({ baseURL: API_BASE });
-
-  instance.interceptors.request.use((config) => {
-    const access = localStorage.getItem("access");
-    if (access && config.headers) {
-      config.headers.Authorization = `Bearer ${access}`;
-    }
-    return config;
-  });
-
-  // General promise for all parallel refreshes - race excluded
-  let refreshPromise: Promise<string> | null = null;
-
-  const performRefresh = (): Promise<string> => {
-    if (!refreshPromise) {
-      const refresh = localStorage.getItem("refresh");
-      refreshPromise = axios
-        .post<TokenPair>(`${API_BASE}/token/refresh/`, { refresh })
-        .then(({ data }) => {
-          localStorage.setItem("access", data.access);
-          return data.access;
-        })
-        .finally(() => {
-          refreshPromise = null;
-        });
-    }
-    return refreshPromise;
-  };
-
-  instance.interceptors.response.use(
-    (response) => response,
-    async (error: AxiosError) => {
-      const originalRequest = error.config as RetryableRequestConfig | undefined;
-      const refresh = localStorage.getItem("refresh");
-
-      if (
-        error.response?.status === 401 &&
-        refresh &&
-        originalRequest &&
-        !originalRequest._retry
-      ) {
-        originalRequest._retry = true;
-        try {
-          const newAccess = await performRefresh();
-          originalRequest.headers = originalRequest.headers ?? {};
-          originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-          return instance(originalRequest);
-        } catch {
-          logout();
-        }
+  useEffect(() => {
+    const requestInterceptor = api.interceptors.request.use((config) => {
+      const access = localStorage.getItem("access");
+      if (access && config.headers) {
+        config.headers.Authorization = `Bearer ${access}`;
       }
-      return Promise.reject(error);
-    }
-  );
+      return config;
+    });
 
-  return instance;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    const performRefresh = (): Promise<string> => {
+      if (!refreshPromiseRef.current) {
+        const refresh = localStorage.getItem("refresh");
+        refreshPromiseRef.current = refreshTokenRequest(refresh!)
+          .then(({ data }) => {
+            localStorage.setItem("access", data.access);
+            return data.access;
+          })
+          .finally(() => {
+            refreshPromiseRef.current = null;
+          });
+      }
+      return refreshPromiseRef.current;
+    };
+
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        const originalRequest = error.config as RetryableRequestConfig | undefined;
+        const refresh = localStorage.getItem("refresh");
+
+        if (
+          error.response?.status === 401 &&
+          refresh &&
+          originalRequest &&
+          !originalRequest._retry
+        ) {
+          originalRequest._retry = true;
+          try {
+            const newAccess = await performRefresh();
+            originalRequest.headers = originalRequest.headers ?? {};
+            originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+            return api(originalRequest);
+          } catch {
+            logout();
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.request.eject(requestInterceptor);
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [api]);
 
 
+  const fetchMe = useCallback(async (): Promise<User> => {
+    const { data } = await fetchMeRequest(api);
+    setUser(data);
+    return data;
+  }, [api]);
 
   const login = async ({ email, password }: LoginPayload): Promise<void> => {
-    const { data } = await axios.post<TokenPair>(`${API_BASE}/login/`, { email, password });
+    const { data } = await loginRequest({ email, password });
     localStorage.setItem("access", data.access);
     localStorage.setItem("refresh", data.refresh);
     await fetchMe();
   };
 
   const register = async (payload: RegisterPayload): Promise<void> => {
-    await axios.post(`${API_BASE}/register/`, payload);
+    await registerRequest(payload);
     await login({ email: payload.email, password: payload.password });
   };
 
-const fetchMe = useCallback(async (): Promise<User> => {
-    const { data } = await api.get<User>("/me/");
-    setUser(data);
-    return data;
-  }, [api]);
-
   useEffect(() => {
     let ignore = false;
-    const token = localStorage.getItem("access");
 
-    if (token) {
-      api
-        .get<User>("/me/")
-        .then(({ data }) => {
-          if (!ignore) {
-            setUser(data);
-          }
-        })
-        .catch(() => {
-          if (!ignore) {
-            logout();
-          }
-        })
-        .finally(() => {
-          if (!ignore) {
-            setLoading(false);
-          }
-        });
+    async function checkAuth() {
+      const token = localStorage.getItem("access");
+      if (!token) return;
+
+      try {
+        await fetchMe();
+      } catch {
+        if (!ignore) logout();
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
+
+    checkAuth();
 
     return () => {
       ignore = true;
     };
-  }, [api]);
+  }, [fetchMe]);
 
   const value: AuthContextValue = { user, loading, login, register, logout, api };
 
