@@ -1,5 +1,10 @@
 {
   "auth": {
+    "heroTitle": "Find cargo or a carrier in minutes",
+    "heroSubtitle": "A freight marketplace for Germany and the EU",
+    "registerHeroTitle": "Join the network of carriers",
+    "registerHeroSubtitle": "Create an account and get access to current requests",
+    "accessDenied": "You do not have access to this page.",
     "forgotPasswordLink": "Forgot password?",
     "forgotPasswordTitle": "Reset Password",
     "forgotPasswordDesc": "Enter your registered email address to receive a password reset link.",
@@ -33,8 +38,6 @@
     "login": "Log in",
     "loginError": "Login failed. Please check your credentials.",
     "noAccount": "No account yet? Pick a role above and switch to \"Register\".",
-    "heroTitle": "A shipment order shows its route before a driver taps \"Accept\".",
-    "heroSubtitle": "The marketplace for companies, private clients and carriers across Germany — with real-time status tracking.",
     "statsRequests": "active orders",
     "statsDrivers": "drivers online",
     "statsCoverage": "countries covered",

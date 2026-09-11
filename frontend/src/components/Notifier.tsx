@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Snackbar, Alert, type AlertColor } from '@mui/material';
 
-// 1. Описание данных события
+// 1. Description of event data
 interface NotifyDetail {
   message: string;
   severity: AlertColor;
 }
 
-// 2. Используем type вместо пустого interface
+// 2. Use type instead of empty interface
 type NotifyEvent = CustomEvent<NotifyDetail>;
 
 const Notifier: React.FC = () => {
@@ -51,14 +51,14 @@ const Notifier: React.FC = () => {
 
 export default Notifier;
 
-// Базовая функция вызова
+// Basic calling function
 function triggerToast(message: string, severity: AlertColor = 'info') {
   window.dispatchEvent(
     new CustomEvent<NotifyDetail>('notify', { detail: { message, severity } })
   );
 }
 
-// Хелперы .success(), .error(), .warning(), .info()
+// Helpers .success(), .error(), .warning(), .info()
 export const toast = Object.assign(triggerToast, {
   success: (message: string) => triggerToast(message, 'success'),
   error: (message: string) => triggerToast(message, 'error'),

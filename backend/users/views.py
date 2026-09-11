@@ -129,7 +129,7 @@ class PasswordResetRequestView(APIView):
             
             subject = "Passwort zurücksetzen | Fracht.Markt"
             
-            # 1. Текстовая версия
+            # Text version
             plain_message = (
                 f"Hallo {user.username},\n\n"
                 f"Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:\n"
@@ -137,7 +137,7 @@ class PasswordResetRequestView(APIView):
                 f"Falls Sie dies nicht angefordert haben, ignorieren Sie diese E-Mail."
             )
             
-            # 2. Красивая HTML-версия с кнопкой
+            # 2. Beautiful HTML version with button
             html_message = f"""
             <!DOCTYPE html>
             <html>

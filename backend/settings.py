@@ -149,8 +149,8 @@ STATIC_URL = 'static/'
 # ==========================================
 # Email Configuration (SMTP)
 # ==========================================
-# Если в .env задан EMAIL_BACKEND, берем его, иначе:
-# в DEBUG=True — вывод в консоль, в продакшене — реальная отправка по SMTP
+# If EMAIL_BACKEND is specified in .env, take it, otherwise:
+# in DEBUG=True - output to the console, in production - actual sending via SMTP
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend"

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axios, { isAxiosError } from "axios";
 import { toast } from "../components/Notifier";
-import "./ProfilePage.css"; // переиспользуем стили форм
+import "./ProfilePage.css"; // reuse form styles
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/auth";
 
