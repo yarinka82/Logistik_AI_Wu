@@ -69,6 +69,7 @@ Docker does not affect the frontend.
 
 
 
+
 ====📝 Ліцензія===
 Цей проект є власністю компанії Digital IT Hub Würzburg e .V. Всі права захищені.
 
