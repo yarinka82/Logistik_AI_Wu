@@ -1,10 +1,11 @@
 import os
+import dj_database_url
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
 
 load_dotenv(BASE_DIR / '.env')
 
@@ -45,9 +46,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'storages',
     'users',
 ]
 
@@ -102,10 +105,10 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        engine="django.contrib.gis.db.backends.postgis",
+    )
 }
 
 
@@ -149,8 +152,8 @@ STATIC_URL = 'static/'
 # ==========================================
 # Email Configuration (SMTP)
 # ==========================================
-# Если в .env задан EMAIL_BACKEND, берем его, иначе:
-# в DEBUG=True — вывод в консоль, в продакшене — реальная отправка по SMTP
+# If EMAIL_BACKEND is specified in .env, take it, otherwise:
+# in DEBUG=True - output to the console, in production - actual sending via SMTP
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend"
@@ -168,3 +171,15 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", "Fracht.Markt <noreply@fracht-markt.de>"
 )
+
+# S3-совместимое хранилище (MinIO)
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
+AWS_S3_FILE_OVERWRITE = False
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+# Celery / Redis
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL

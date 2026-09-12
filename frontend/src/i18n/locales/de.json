@@ -1,5 +1,10 @@
 {
   "auth": {
+    "heroTitle": "Finden Sie Fracht oder einen Transporteur in wenigen Minuten",
+    "heroSubtitle": "Marktplatz für Transportdienstleistungen in Deutschland und der EU",
+    "registerHeroTitle": "Treten Sie dem Netzwerk der Transportdienstleister bei",
+    "registerHeroSubtitle": "Erstellen Sie ein Konto und erhalten Sie Zugriff auf aktuelle Aufträge",
+    "accessDenied": "Sie haben keinen Zugriff auf diese Seite.",
     "forgotPasswordLink": "Passwort vergessen?",
     "forgotPasswordTitle": "Passwort zurücksetzen",
     "forgotPasswordDesc": "Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen zu erhalten.",
@@ -33,8 +38,6 @@
     "login": "Anmelden",
     "loginError": "Login fehlgeschlagen. Bitte Daten prüfen.",
     "noAccount": "Noch kein Konto? Rolle oben wählen und zu „Registrieren“ wechseln.",
-    "heroTitle": "Ein Transportauftrag zeigt seine Route, bevor ein Fahrer auf „Übernehmen“ tippt.",
-    "heroSubtitle": "Der Marktplatz für Firmen, Privatkunden und Frachtführer in ganz Deutschland — mit Statusverfolgung in Echtzeit.",
     "statsRequests": "aktive Aufträge",
     "statsDrivers": "Fahrer online",
     "statsCoverage": "Länder Abdeckung",

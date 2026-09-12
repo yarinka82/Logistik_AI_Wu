@@ -11,9 +11,9 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div style={styles.layoutContainer}>
-      {/* 1. Глобальная шапка приложения */}
+      {/*1. Global App Header*/}
       <header style={styles.header}>
-        {/* Логотип со ссылкой на главную */}
+        {/*Logo with a link to the home page*/}
         <div style={styles.brand} onClick={() => navigate("/")}>
           Fracht<span style={{ color: "#00d2b4" }}>.</span>Markt
         </div>
@@ -21,7 +21,7 @@ export const MainLayout: React.FC = () => {
         <div style={styles.headerActions}>
           <LanguageSwitch />
 
-          {/* Кликабельный блок профиля пользователя */}
+          {/*User Profile Clickable Block*/}
           <div
             style={styles.userProfileBtn}
             onClick={() => navigate("/profile")}
@@ -44,7 +44,7 @@ export const MainLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* 2. Контент текущей страницы (Dashboard, Profile и т.д.) */}
+      {/*2. Content of the current page (Dashboard, Profile, etc.)*/}
       <main style={styles.mainContent}>
         <Outlet />
       </main>

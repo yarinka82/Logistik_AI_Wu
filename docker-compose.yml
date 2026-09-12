@@ -1,19 +1,62 @@
 services:
-  backend:
-    build:
-      context: ..
-      dockerfile: docker/backend/Dockerfile
-    env_file:
-      - ../.env
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: logistik_db
+    environment:
+      POSTGRES_DB: logistik
+      POSTGRES_USER: logistik
+      POSTGRES_PASSWORD: logistik
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: logistik_redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: logistik_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  app:
+    build: ./backend
+    container_name: logistik_app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
     ports:
       - "8000:8000"
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
+      - minio
 
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker/frontend/Dockerfile
-    ports:
-      - "5173:5173"
+  worker:
+    build: ./backend
+    container_name: logistik_worker
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  pgdata:
+  miniodata:

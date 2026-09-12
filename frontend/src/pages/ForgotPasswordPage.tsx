@@ -1,12 +1,10 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import {Link, useNavigate} from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axios, { isAxiosError } from "axios";
 import { toast } from "../components/Notifier";
-import "./ProfilePage.css"; // переиспользуем стили форм
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/auth";
+import { forgotPasswordRequest } from "../api/auth";
+import {extractErrorMessage} from "../api/errors.ts";
 
 export const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation();
@@ -16,19 +14,17 @@ export const ForgotPasswordPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await axios.post(`${API_BASE}/password-reset/`, { email });
+      await forgotPasswordRequest(email);
       setSent(true);
       toast.success(t("auth.resetEmailSent", "Інструкції надіслано на вашу пошту!"));
-    } catch (err: unknown) {
-      let msg = t("auth.resetEmailError", "Не вдалося надіслати запит");
-      if (isAxiosError(err) && err.response?.data?.detail) {
-        msg = err.response.data.detail;
-      }
-      toast.error(msg);
+      } catch (err: unknown) {
+        const msg = extractErrorMessage(err, t("auth.resetEmailError", "Не вдалося надіслати запит"));
+        toast.error(msg);
+
     } finally {
       setSubmitting(false);
     }

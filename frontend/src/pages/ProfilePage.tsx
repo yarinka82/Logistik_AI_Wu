@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isAxiosError } from "axios";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "../components/Notifier";
+import { changePasswordRequest, updateProfileRequest } from "../api/auth";
+import { extractErrorMessage } from "../api/errors.ts";
 import "./ProfilePage.css";
 
 export const ProfilePage: React.FC = () => {
@@ -25,10 +26,10 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      // await api.patch('/me/', { phone });
+      await updateProfileRequest(api, { phone });
       toast.success(t("profile.saveSuccess", "Дані профілю збережено!"));
-    } catch {
-      toast.error(t("profile.saveError", "Помилка збереження"));
+    } catch (err: unknown) {
+      toast.error(extractErrorMessage(err, t("profile.saveError", "Помилка збереження")));
     } finally {
       setSavingProfile(false);
     }
@@ -44,7 +45,7 @@ export const ProfilePage: React.FC = () => {
 
     setSavingPassword(true);
     try {
-      await api.post("/change-password/", {
+      await changePasswordRequest(api, {
         old_password: oldPassword,
         new_password: newPassword,
       });
@@ -53,13 +54,10 @@ export const ProfilePage: React.FC = () => {
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err: unknown) {
-      let msg = t("profile.passwordError", "Не вдалося змінити пароль");
-      if (isAxiosError(err) && err.response?.data) {
-        const d = err.response.data;
-        msg = typeof d === "string" ? d : d.detail || Object.values(d).flat().join(" ");
-      }
-      toast.error(msg);
+      } catch (err: unknown) {
+        const msg = extractErrorMessage(err, t("profile.passwordError", "Не вдалося змінити пароль"));
+        toast.error(msg);
+
     } finally {
       setSavingPassword(false);
     }
@@ -67,7 +65,7 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-container">
-      {/* Карточка 1: Личные данные */}
+      {/*Card 1: Personal details*/}
       <div className="profile-card">
         <h2 className="profile-title">
           {t("profile.title", "Особисті дані")}
@@ -108,7 +106,7 @@ export const ProfilePage: React.FC = () => {
         </form>
       </div>
 
-      {/* Карточка 2: Смена пароля */}
+      {/*Card 2: Password Change*/}
       <div className="profile-card">
         <h2 className="profile-title">
           {t("profile.securityTitle", "Безпека та зміна пароля")}
@@ -118,7 +116,7 @@ export const ProfilePage: React.FC = () => {
         </p>
 
         <form onSubmit={handleChangePassword} className="profile-form">
-          {/* Поле 1: Старый пароль */}
+          {/*Field 1: Old Password*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.oldPassword", "Поточний пароль")}
@@ -144,7 +142,7 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Поле 2: Новый пароль */}
+          {/*Field 2: New Password*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.newPassword", "Новий пароль")}
@@ -170,7 +168,7 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Поле 3: Подтверждение нового пароля */}
+          {/*Confirm New Password:*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.confirmNewPassword", "Підтвердження нового пароля")}

@@ -88,13 +88,12 @@ class CustomTokenView(TokenObtainPairView):
     serializer_class = CustomTokenSerializer
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
-    
     
     
 class ChangePasswordView(APIView):
@@ -129,7 +128,7 @@ class PasswordResetRequestView(APIView):
             
             subject = "Passwort zurücksetzen | Fracht.Markt"
             
-            # 1. Текстовая версия
+            # Text version
             plain_message = (
                 f"Hallo {user.username},\n\n"
                 f"Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:\n"
@@ -137,7 +136,7 @@ class PasswordResetRequestView(APIView):
                 f"Falls Sie dies nicht angefordert haben, ignorieren Sie diese E-Mail."
             )
             
-            # 2. Красивая HTML-версия с кнопкой
+            # 2. Beautiful HTML version with button
             html_message = f"""
             <!DOCTYPE html>
             <html>
