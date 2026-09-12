@@ -1,4 +1,3 @@
-
 # Logistik_AI_Wu — Daily Workflow
 
 ## 1. Start of day: bring up the full stack
@@ -65,6 +64,9 @@ Frontend runs locally, outside Docker:
 
 GDAL is not required.  
 Docker does not affect the frontend.
+
+
+
 
 
 
