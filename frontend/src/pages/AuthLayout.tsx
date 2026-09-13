@@ -15,7 +15,7 @@ export function AuthLayout({ children, heroTitleKey, heroSubtitleKey }: AuthLayo
   const { t, i18n } = useTranslation();
 
   return (
-    <div className="stage">
+    <div className="stage login-stage">
       <div className="map-panel">
         <svg className="route-svg" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
           <path
