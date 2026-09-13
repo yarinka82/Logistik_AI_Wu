@@ -22,18 +22,26 @@ export function resetPasswordConfirmRequest(uid: string, token: string, newPassw
   return authClient.post("/password-reset/confirm/", { uid, token, new_password: newPassword });
 }
 
-export function fetchMeRequest(api: import("axios").AxiosInstance) {
-  return api.get<User>("/me/");
+export function fetchMeRequest(api: AxiosInstance) {
+  return api.get<User>("/auth/me/");
 }
 
 // Требуют авторизованного инстанса (api из useAuth), не authClient
 export function updateProfileRequest(api: AxiosInstance, payload: { phone: string }) {
-  return api.patch<User>("/me/", payload);
+  return api.patch<User>("/auth/me/", payload);
 }
 
 export function changePasswordRequest(
   api: AxiosInstance,
   payload: { old_password: string; new_password: string }
 ) {
-  return api.post("/change-password/", payload);
+  return api.post("/auth/change-password/", payload);
+}
+
+export function uploadLicensePhotoRequest(api: AxiosInstance, file: File) {
+  const form = new FormData();
+  form.append("license_photo", file);
+  return api.post<{ license_photo: string }>("/auth/me/license-photo/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }

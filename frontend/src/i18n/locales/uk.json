@@ -1,6 +1,9 @@
 
 {
   "auth": {
+    "checkingInvite": "Перевірка запрошення...",
+    "registeringForCompany": "Реєстрація водія компанії",
+    "inviteInvalid": "Запрошення недійсне або прострочене",
     "heroTitle": "Знайдіть вантаж або перевізника за хвилини",
     "heroSubtitle": "Маркетплейс вантажоперевезень для Німеччини та ЄС",
     "registerHeroTitle": "Приєднуйтесь до мережі перевізників",
@@ -54,29 +57,74 @@
     "loginSuccess": "Успішний вхід у систему!",
     "registerSuccess": "Обліковий запис успішно створено!"
   },
-"dashboard": {
-  "systemActive": "Система вантажоперевезень активна",
-  "welcome": "Ласкаво просимо",
-  "heroDesc": "Єдина платформа управління вантажними автоперевезеннями по Німеччині та Європі."
- },
- "profile": {
-  "subtitle": "Керуйте своїми контактними та обліковими даними",
-  "phone": "Телефон",
-  "saveError": "Помилка збереження",
-  "title": "Особисті дані",
-  "sending": "Надсилання...",
-  "saveSuccess": "Дані профілю успішно збережено!",
-  "securityTitle": "Безпека та зміна пароля",
-  "securityDesc": "Введіть поточний пароль для встановлення нового",
-  "oldPassword": "Поточний пароль",
-  "newPassword": "Новий пароль",
-  "confirmNewPassword": "Підтвердження нового пароля",
-  "updatePasswordBtn": "Оновити пароль",
-  "passwordSuccess": "Пароль успішно змінено!",
-  "passwordError": "Не вдалося змінити пароль. Перевірте старий пароль."
+  "dashboard": {
+    "systemActive": "Система вантажоперевезень активна",
+    "welcome": "Ласкаво просимо",
+    "heroDesc": "Єдина платформа управління вантажними автоперевезеннями по Німеччині та Європі."
   },
- "common": {
+  "profile": {
+    "viewPdf": "Переглянути PDF",
+    "errorUnsupportedType": "Непідтримуваний формат файлу: .{{extension}}. Дозволено: {{allowed}}",
+    "errorFileTooLarge": "Файл занадто великий (макс. {{maxMb}} МБ)",
+    "errorCorruptedImage": "Файл пошкоджений або не є зображенням",
+    "title": "Особисті дані",
+    "subtitle": "Керуйте своїми контактними та обліковими даними",
+    "phone": "Телефон",
+    "licenseTitle": "Права водія",
+    "licenseSubtitle": "Завантажте фото або скан посвідчення водія",
+    "licensePhoto": "Фото прав",
+    "photoSuccess": "Фото прав оновлено!",
+    "photoError": "Не вдалося завантажити фото",
+    "editTitle": "Налаштування профілю",
+    "saveError": "Помилка збереження",
+    "sending": "Надсилання...",
+    "saveSuccess": "Дані профілю успішно збережено!",
+    "securityTitle": "Безпека та зміна пароля",
+    "securityDesc": "Введіть поточний пароль для встановлення нового",
+    "oldPassword": "Поточний пароль",
+    "newPassword": "Новий пароль",
+    "confirmNewPassword": "Підтвердження нового пароля",
+    "updatePasswordBtn": "Оновити пароль",
+    "passwordSuccess": "Пароль успішно змінено!",
+    "passwordError": "Не вдалося змінити пароль. Перевірте старий пароль."
+  },
+  "common": {
+    "cancel": "Скасувати",
     "saving": "Збереження...",
-    "save": "Зберегти зміни"
+    "save": "Зберегти зміни",
+    "sending": "Надсилання..."
+  },
+  "fleet": {
+    "photoColumn": "Фото",
+    "editDriver": "Редагувати",
+    "removeDriver": "Виключити зі штату",
+    "confirmRemove": "Виключити водія зі штату?",
+    "title": "Мій автопарк",
+    "tabDrivers": "Водії",
+    "tabVehicles": "Транспорт",
+    "generateInvite": "Запросити водія",
+    "inviteCode": "Код запрошення",
+    "inviteExpires": "Дійсний до",
+    "inviteCopy": "Копіювати",
+    "inviteCopied": "Скопійовано!",
+    "driverName": "ПІБ",
+    "driverEmail": "Email",
+    "driverStatus": "Статус",
+    "statusActive": "Активний",
+    "statusInactive": "Неактивний",
+    "vehiclePlate": "Номер",
+    "vehicleModel": "Марка / модель",
+    "vehicleDriver": "Водій",
+    "vehicleInsurance": "Страховка",
+    "vehicleInspection": "Техогляд",
+    "expiringSoon": "закінчується",
+    "noDrivers": "У штаті ще немає водіїв.",
+    "noVehicles": "Ще немає транспорту."
+  },
+  "nav": {
+    "dashboard": "Дашборд",
+    "fleet": "Мій автопарк",
+    "accountant": "Бухгалтерія"
   }
+
 }

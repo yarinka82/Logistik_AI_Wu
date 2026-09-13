@@ -6,6 +6,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AccountantPage } from "./pages/AccountantPage";
+import { FleetPage } from "./pages/FleetPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordConfirmPage } from "./pages/ResetPasswordConfirmPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -36,7 +37,7 @@ export default function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-
+            <Route path="/fleet" element={<FleetPage />} />
             {/*Access only for accountant and admin*/}
             <Route
               path="/accountant"
