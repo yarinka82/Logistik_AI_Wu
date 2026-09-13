@@ -1,5 +1,8 @@
 {
   "auth": {
+    "checkingInvite": "Checking invite...",
+    "registeringForCompany": "Registering as driver for",
+    "inviteInvalid": "Invite invalid or expired",
     "heroTitle": "Find cargo or a carrier in minutes",
     "heroSubtitle": "A freight marketplace for Germany and the EU",
     "registerHeroTitle": "Join the network of carriers",
@@ -56,11 +59,21 @@
     "systemActive": "Freight System Active",
     "welcome": "Welcome to Dashboard",
     "heroDesc": "All-in-one platform for road freight transportation across Germany and Europe."
-    },
+  },
   "profile": {
-    "subtitle": "Manage your contact and account information",
-    "title": "Personal Information",
-    "phone": "Phone number",
+    "viewPdf": "View PDF",
+    "errorUnsupportedType": "Unsupported file type: .{{extension}}. Allowed: {{allowed}}",
+    "errorFileTooLarge": "File too large (max {{maxMb}} MB)",
+    "errorCorruptedImage": "File is corrupted or not a valid image",
+    "title": "Personal details",
+    "subtitle": "Manage your contact and account details",
+    "phone": "Phone",
+    "licenseTitle": "Driver's license",
+    "licenseSubtitle": "Upload a photo or scan of your driver's license",
+    "licensePhoto": "License photo",
+    "photoSuccess": "License photo updated!",
+    "photoError": "Failed to upload photo",
+    "editTitle": "Profile settings",
     "saveSuccess": "Profile details successfully saved!",
     "saveError": "Failed to save profile details",
     "securityTitle": "Security & Change Password",
@@ -73,9 +86,42 @@
     "passwordError": "Failed to update password. Please check your current password."
   },
   "common": {
+    "cancel": "Cancel",
     "saving": "Saving...",
     "save": "Save changes",
     "sending": "Sending..."
+  },
+  "fleet": {
+    "photoColumn": "Photo",
+    "editDriver": "Edit",
+    "removeDriver": "Remove from team",
+    "confirmRemove": "Remove driver from your team?",
+    "title": "My Fleet",
+    "tabDrivers": "Drivers",
+    "tabVehicles": "Vehicles",
+    "generateInvite": "Invite a driver",
+    "inviteCode": "Invite code",
+    "inviteExpires": "Valid until",
+    "inviteCopy": "Copy",
+    "inviteCopied": "Copied!",
+    "driverName": "Name",
+    "driverEmail": "Email",
+    "driverStatus": "Status",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "vehiclePlate": "Plate number",
+    "vehicleModel": "Brand / Model",
+    "vehicleDriver": "Driver",
+    "vehicleInsurance": "Insurance",
+    "vehicleInspection": "Inspection",
+    "expiringSoon": "expiring soon",
+    "noDrivers": "No drivers in your team yet.",
+    "noVehicles": "No vehicles yet."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "fleet": "My Fleet",
+    "accountant": "Accounting"
   }
 
 }

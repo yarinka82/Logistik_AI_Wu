@@ -23,7 +23,7 @@ class User(AbstractUser):
 class ClientCompanyProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile")
     company_name = models.CharField(max_length=255)
-    edrpou = models.CharField(max_length=10, unique=True)
+    edrpou = models.CharField(max_length=15, unique=True)
     legal_address = models.CharField(max_length=500, blank=True)
 
 
@@ -35,10 +35,18 @@ class ClientIndividualProfile(models.Model):
 class DriverProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="driver_profile")
     full_name = models.CharField(max_length=255)
-    driver_license_number = models.CharField(max_length=50)
+    driver_license_number = models.CharField(max_length=50, blank=True)
     vehicle_info = models.CharField(max_length=255, blank=True)
-    is_carrier_company = models.BooleanField(default=False)  # the sole proprietor / carrier or the company itself
+    license_photo = models.FileField(upload_to="driver_licenses/", blank=True, null=True)
 
+    is_carrier_company = models.BooleanField(default=False)
+    also_drives = models.BooleanField(default=True)
+
+    employer = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="staff_drivers",
+        limit_choices_to={"is_carrier_company": True},
+    )
 
 
 class AccountantProfile(models.Model):

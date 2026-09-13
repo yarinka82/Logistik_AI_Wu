@@ -1,139 +1,90 @@
-import React from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { LanguageSwitch } from "../i18n/LanguageSwitch";
+import { ThemeToggle } from "../theme/ThemeToggle";
+import { Role } from "../auth/types";
+import "./MainLayout.css";
 
-export const MainLayout: React.FC = () => {
+interface NavItem {
+  to: string;
+  label: string;
+  fallback: string;
+  end: boolean;
+  roles: Role[] | null;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { to: "/", label: "dashboard", fallback: "Дашборд", end: true, roles: null },
+  { to: "/fleet", label: "fleet", fallback: "Мій автопарк", end: false, roles: [Role.Driver] },
+  {
+    to: "/accountant",
+    label: "accountant",
+    fallback: "Бухгалтерія",
+    end: false,
+    roles: [Role.Accountant, Role.Admin],
+  },
+];
+
+export function MainLayout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const visibleNav = NAV_ITEMS.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
+
   return (
-    <div style={styles.layoutContainer}>
-      {/*1. Global App Header*/}
-      <header style={styles.header}>
-        {/*Logo with a link to the home page*/}
-        <div style={styles.brand} onClick={() => navigate("/")}>
-          Fracht<span style={{ color: "#00d2b4" }}>.</span>Markt
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand" onClick={() => navigate("/")}>
+          Fracht<span className="brand-dot">.</span>Markt
         </div>
 
-        <div style={styles.headerActions}>
+        <nav className="sidebar-nav">
+          {visibleNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+            >
+              {t(`nav.${item.label}`, item.fallback)}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <ThemeToggle />
+        </div>
+      </aside>
+
+      <div className="app-main">
+        <header className="topbar">
           <LanguageSwitch />
 
-          {/*User Profile Clickable Block*/}
           <div
-            style={styles.userProfileBtn}
+            className="user-profile-btn"
             onClick={() => navigate("/profile")}
             title={t("profile.editTitle", "Налаштування профілю")}
           >
-            <div style={styles.userAvatar}>
+            <div className="user-avatar">
               {(user?.username?.[0] || user?.email?.[0] || "U").toUpperCase()}
             </div>
-            <div style={styles.userText}>
-              <div style={styles.userName}>{user?.username || user?.email}</div>
-              <div style={styles.userRole}>
-                {user?.role ? t(`auth.roles.${user.role}`, user.role) : "User"}
-              </div>
+            <div className="user-text">
+              <div className="user-name">{user?.username || user?.email}</div>
+              <div className="user-role">{user?.role ? t(`auth.roles.${user.role}`, user.role) : "User"}</div>
             </div>
           </div>
 
-          <button onClick={logout} style={styles.logoutBtn}>
+          <button onClick={logout} className="logout-btn">
             {t("auth.logout", "Вийти")}
           </button>
-        </div>
-      </header>
+        </header>
 
-      {/*2. Content of the current page (Dashboard, Profile, etc.)*/}
-      <main style={styles.mainContent}>
-        <Outlet />
-      </main>
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  layoutContainer: {
-    minHeight: "100vh",
-    backgroundColor: "#0d1117",
-    color: "#fff",
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    display: "flex",
-    flexDirection: "column",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "14px 32px",
-    backgroundColor: "rgba(13, 17, 23, 0.95)",
-    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  brand: {
-    fontSize: "22px",
-    fontWeight: 800,
-    letterSpacing: "-0.5px",
-    cursor: "pointer",
-    userSelect: "none",
-  },
-  headerActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-  },
-  userProfileBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    cursor: "pointer",
-    padding: "6px 12px",
-    borderRadius: "10px",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    transition: "all 0.2s ease",
-  },
-  userAvatar: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "#00d2b4",
-    color: "#0d1117",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700,
-    fontSize: "13px",
-  },
-  userText: {
-    textAlign: "left",
-  },
-  userName: {
-    fontSize: "13px",
-    fontWeight: 600,
-    lineHeight: 1.2,
-  },
-  userRole: {
-    fontSize: "11px",
-    color: "#8b949e",
-    textTransform: "capitalize",
-    lineHeight: 1.2,
-  },
-  logoutBtn: {
-    backgroundColor: "transparent",
-    border: "1px solid rgba(255, 255, 255, 0.2)",
-    color: "#fff",
-    padding: "7px 14px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: 500,
-  },
-  mainContent: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  },
-};
+}

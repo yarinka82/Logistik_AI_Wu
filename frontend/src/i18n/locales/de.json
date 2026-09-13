@@ -1,5 +1,8 @@
 {
   "auth": {
+    "checkingInvite": "Einladung wird geprüft...",
+    "registeringForCompany": "Registrierung als Fahrer für",
+    "inviteInvalid": "Einladung ungültig oder abgelaufen",
     "heroTitle": "Finden Sie Fracht oder einen Transporteur in wenigen Minuten",
     "heroSubtitle": "Marktplatz für Transportdienstleistungen in Deutschland und der EU",
     "registerHeroTitle": "Treten Sie dem Netzwerk der Transportdienstleister bei",
@@ -57,11 +60,21 @@
     "systemActive": "Frachtsystem aktiv",
     "welcome": "Willkommen im Portal",
     "heroDesc": "Die zentrale Plattform für Straßengüterverkehr in Deutschland und Europa."
- },
+  },
   "profile": {
+    "viewPdf": "PDF ansehen",
+    "errorUnsupportedType": "Nicht unterstütztes Dateiformat: .{{extension}}. Erlaubt: {{allowed}}",
+    "errorFileTooLarge": "Datei zu groß (max. {{maxMb}} MB)",
+    "errorCorruptedImage": "Datei ist beschädigt oder kein gültiges Bild",
     "title": "Persönliche Daten",
     "subtitle": "Verwalten Sie Ihre Kontakt- und Kontodaten",
-    "phone": "Telefonnummer",
+    "phone": "Telefon",
+    "licenseTitle": "Führerschein",
+    "licenseSubtitle": "Laden Sie ein Foto oder einen Scan des Führerscheins hoch",
+    "licensePhoto": "Foto des Führerscheins",
+    "photoSuccess": "Führerscheinfoto aktualisiert!",
+    "photoError": "Foto konnte nicht hochgeladen werden",
+    "editTitle": "Profileinstellungen",
     "saveSuccess": "Profildaten erfolgreich gespeichert!",
     "securityTitle": "Sicherheit & Passwort ändern",
     "securityDesc": "Geben Sie Ihr aktuelles Passwort ein, um ein neues festzulegen",
@@ -74,9 +87,42 @@
     "saveError": "Fehler beim Speichern"
   },
   "common": {
+    "cancel": "Abbrechen",
     "saving": "Wird gespeichert...",
     "save": "Änderungen speichern",
     "sending": "Senden..."
+  },
+  "fleet": {
+    "photoColumn": "Foto",
+    "editDriver": "Bearbeiten",
+    "removeDriver": "Aus dem Team entfernen",
+    "confirmRemove": "Fahrer aus dem Team entfernen?",
+    "title": "Mein Fuhrpark",
+    "tabDrivers": "Fahrer",
+    "tabVehicles": "Fahrzeuge",
+    "generateInvite": "Fahrer einladen",
+    "inviteCode": "Einladungscode",
+    "inviteExpires": "Gültig bis",
+    "inviteCopy": "Kopieren",
+    "inviteCopied": "Kopiert!",
+    "driverName": "Name",
+    "driverEmail": "E-Mail",
+    "driverStatus": "Status",
+    "statusActive": "Aktiv",
+    "statusInactive": "Inaktiv",
+    "vehiclePlate": "Kennzeichen",
+    "vehicleModel": "Marke / Modell",
+    "vehicleDriver": "Fahrer",
+    "vehicleInsurance": "Versicherung",
+    "vehicleInspection": "TÜV",
+    "expiringSoon": "läuft bald ab",
+    "noDrivers": "Noch keine Fahrer im Team.",
+    "noVehicles": "Noch keine Fahrzeuge."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "fleet": "Mein Fuhrpark",
+    "accountant": "Buchhaltung"
   }
 
 }

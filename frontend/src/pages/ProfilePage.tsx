@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "../components/Notifier";
-import { changePasswordRequest, updateProfileRequest } from "../api/auth";
-import { extractErrorMessage } from "../api/errors.ts";
+import { changePasswordRequest, updateProfileRequest, uploadLicensePhotoRequest } from "../api/auth";
+import {extractErrorMessage, translateUploadError} from "../api/errors.ts";
 import "./ProfilePage.css";
 
 export const ProfilePage: React.FC = () => {
@@ -22,6 +22,9 @@ export const ProfilePage: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [licensePhotoUrl, setLicensePhotoUrl] = useState<string | null>(user?.license_photo ?? null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -32,6 +35,23 @@ export const ProfilePage: React.FC = () => {
       toast.error(extractErrorMessage(err, t("profile.saveError", "Помилка збереження")));
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const { data } = await uploadLicensePhotoRequest(api, file);
+      setLicensePhotoUrl(data.license_photo);
+      toast.success(t("profile.photoSuccess", "Фото прав оновлено!"));
+    } catch (err: unknown) {
+      toast.error(translateUploadError(err, t));
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
     }
   };
 
@@ -63,8 +83,9 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  return (
-    <div className="profile-container">
+return (
+  <div className="profile-container">
+    <div className="profile-stack">
       {/*Card 1: Personal details*/}
       <div className="profile-card">
         <h2 className="profile-title">
@@ -116,7 +137,6 @@ export const ProfilePage: React.FC = () => {
         </p>
 
         <form onSubmit={handleChangePassword} className="profile-form">
-          {/*Field 1: Old Password*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.oldPassword", "Поточний пароль")}
@@ -142,7 +162,6 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/*Field 2: New Password*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.newPassword", "Новий пароль")}
@@ -168,7 +187,6 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/*Confirm New Password:*/}
           <div className="form-group">
             <label className="form-label">
               {t("profile.confirmNewPassword", "Підтвердження нового пароля")}
@@ -206,8 +224,43 @@ export const ProfilePage: React.FC = () => {
         </form>
       </div>
     </div>
-  );
-};
 
-export default ProfilePage;
+    {user?.role === "driver" && (
+      <div className="profile-card license-card">
+        <h2 className="profile-title">{t("profile.licenseTitle", "Права водія")}</h2>
+        <p className="profile-subtitle">
+          {t("profile.licenseSubtitle", "Завантажте фото або скан посвідчення водія")}
+        </p>
 
+        <div className="profile-form">
+          {licensePhotoUrl && (
+            licensePhotoUrl.toLowerCase().endsWith(".pdf") ? (
+              <iframe
+                src={licensePhotoUrl}
+                title="license-pdf"
+                style={{ width: "100%", maxWidth: "400px", height: "500px", border: "none", borderRadius: "8px", marginBottom: "12px" }}
+              />
+            ) : (
+              <img
+                src={licensePhotoUrl}
+                alt=""
+                style={{ maxWidth: "240px", borderRadius: "8px", marginBottom: "12px" }}
+              />
+            )
+          )}
+
+          <div className="form-group">
+            <label className="form-label">{t("profile.licensePhoto", "Фото прав")}</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={handlePhotoSelect}
+              disabled={uploadingPhoto}
+              className="form-input"
+            />
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)};

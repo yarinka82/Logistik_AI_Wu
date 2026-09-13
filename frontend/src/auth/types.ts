@@ -16,6 +16,7 @@ export interface User {
   phone: string | null;
   role: Role;
   is_verified: boolean;
+  license_photo: string | null;
 }
 
 export interface LoginPayload {

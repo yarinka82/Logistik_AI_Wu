@@ -15,6 +15,7 @@ from .models import (
     DriverProfile,
     User,
 )
+from .utils import validate_license_photo, compress_license_photo
 
 
 class LoginSerializer(serializers.Serializer):
@@ -45,140 +46,104 @@ class RegisterSerializer(serializers.ModelSerializer):
         User.Role.DRIVER,
     }
 
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True)
-    username = serializers.CharField(required=True)
-
-    # Additional profile fields
-    company_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
-    edrpou = serializers.CharField(required=False, allow_blank=True, write_only=True)
-    full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
-    driver_license_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
-
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    company_name = serializers.CharField(required=False, write_only=True)
+    edrpou = serializers.CharField(required=False, write_only=True)
+    full_name = serializers.CharField(required=False, write_only=True)
+    driver_license_number = serializers.CharField(required=False, write_only=True)
+    invite_code = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    license_photo = serializers.FileField(required=False, write_only=True)
+    
     class Meta:
         model = User
-        fields = [
-            "email",
-            "username",
-            "phone",
-            "password",
-            "role",
-            "company_name",
-            "edrpou",
-            "full_name",
-            "driver_license_number",
-        ]
-
-    def validate_email(self, value):
-        # We bring the email to lowercase and check the uniqueness
-        norm_email = value.lower().strip()
-        if User.objects.filter(email__iexact=norm_email).exists():
-            raise serializers.ValidationError(_("Ein Benutzer mit dieser E-Mail existiert bereits."))
-        return norm_email
-
-    def validate_username(self, value):
-        norm_username = value.strip()
-        if User.objects.filter(username__iexact=norm_username).exists():
-            raise serializers.ValidationError(_("Dieser Benutzername ist bereits vergeben."))
-        return norm_username
+        fields = ["email", "username", "phone", "password", "role", "license_photo",
+                  "company_name", "edrpou", "full_name", "driver_license_number", "invite_code"]
+    
+    def validate_license_photo(self, file):
+        validate_license_photo(file)
+        return file
 
     def validate(self, attrs):
         role = attrs.get("role")
-
-        # 1. Verification of public roles
         if role not in self.PUBLIC_ROLES:
             raise serializers.ValidationError(
-                {"role": _("Diese Rolle kann nicht über die öffentliche Registrierung angelegt werden.")},
-                code="role_not_public",
+                {"role": "Diese Rolle kann nicht über die öffentliche Registrierung angelegt werden."}
             )
-
-        # 2. Checking the fields of specific roles
         if role == User.Role.CLIENT_COMPANY and not attrs.get("company_name"):
-            raise serializers.ValidationError(
-                {"company_name": _("Firmenname ist für die Rolle „client_company“ erforderlich.")},
-                code="company_name_required",
-            )
+            raise serializers.ValidationError("company_name обов'язковий для ролі client_company")
+        if role == User.Role.DRIVER and not attrs.get("driver_license_number"):
+            raise serializers.ValidationError("driver_license_number обов'язковий для ролі driver")
 
-        if role == User.Role.CLIENT_INDIVIDUAL and not attrs.get("full_name"):
-            raise serializers.ValidationError(
-                {"full_name": _("Vollständiger Name ist für Privatkunden erforderlich.")},
-                code="full_name_required",
-            )
-
-        if role == User.Role.DRIVER:
-            if not attrs.get("full_name"):
-                raise serializers.ValidationError(
-                    {"full_name": _("Vollständiger Name ist für Fahrer erforderlich.")},
-                    code="full_name_required",
-                )
-            if not attrs.get("driver_license_number"):
-                raise serializers.ValidationError(
-                    {"driver_license_number": _("Führerscheinnummer ist für Fahrer erforderlich.")},
-                    code="license_required",
-                )
-
-        # 3. Validating password strength
-        temp_user = User(
-            email=attrs.get("email"),
-            username=attrs.get("username"),
-            phone=attrs.get("phone"),
-        )
-        try:
-            validate_password(attrs.get("password"), user=temp_user)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError({"password": list(exc.messages)})
-
+        invite_code = attrs.get("invite_code")
+        self._invite = None
+        if invite_code:
+            from apps.modules.fleet.models import DriverInvite
+            try:
+                invite = DriverInvite.objects.get(code=invite_code)
+            except DriverInvite.DoesNotExist:
+                raise serializers.ValidationError({"invite_code": "Запрошення не знайдено"})
+            if not invite.is_valid():
+                raise serializers.ValidationError({"invite_code": "Запрошення недійсне або прострочене"})
+            self._invite = invite
         return attrs
-
+    
     def create(self, validated_data):
         role = validated_data["role"]
         profile_fields = {
-            k: validated_data.pop(k)
-            for k in ["company_name", "edrpou", "full_name", "driver_license_number"]
+            k: validated_data.pop(k) for k in
+            ["company_name", "edrpou", "full_name", "driver_license_number"]
             if k in validated_data
         }
+        license_photo = validated_data.pop("license_photo", None)
+        validated_data.pop("invite_code", None)
         password = validated_data.pop("password")
-
-        # Atomic user and profile creation in one transaction
-        with transaction.atomic():
-            user = User(**validated_data)
-            user.set_password(password)
-            user.save()
-
-            if role == User.Role.CLIENT_COMPANY:
-                ClientCompanyProfile.objects.create(
-                    user=user,
-                    company_name=profile_fields.get("company_name", ""),
-                    edrpou=profile_fields.get("edrpou", ""),
-                )
-            elif role == User.Role.CLIENT_INDIVIDUAL:
-                ClientIndividualProfile.objects.create(
-                    user=user,
-                    full_name=profile_fields.get("full_name", ""),
-                )
-            elif role == User.Role.DRIVER:
-                DriverProfile.objects.create(
-                    user=user,
-                    full_name=profile_fields.get("full_name", ""),
-                    driver_license_number=profile_fields.get("driver_license_number", ""),
-                )
-            elif role == User.Role.ACCOUNTANT:
-                AccountantProfile.objects.create(
-                    user=user,
-                    full_name=profile_fields.get("full_name", ""),
-                )
-
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        
+        if role == User.Role.CLIENT_COMPANY:
+            ClientCompanyProfile.objects.create(
+                user=user,
+                company_name=profile_fields.get("company_name", ""),
+                edrpou=profile_fields.get("edrpou", ""),
+            )
+        elif role == User.Role.CLIENT_INDIVIDUAL:
+            ClientIndividualProfile.objects.create(user=user, full_name=profile_fields.get("full_name", ""))
+        elif role == User.Role.DRIVER:
+            employer_profile = self._invite.company.driver_profile if self._invite else None
+            driver_profile = DriverProfile.objects.create(
+                user=user,
+                full_name=profile_fields.get("full_name", ""),
+                driver_license_number=profile_fields.get("driver_license_number", ""),
+                employer=employer_profile,
+            )
+            if license_photo:
+                driver_profile.license_photo = compress_license_photo(license_photo)
+                driver_profile.save(update_fields=["license_photo"])
+            if self._invite:
+                self._invite.used_by = user
+                self._invite.save(update_fields=["used_by"])
         return user
+
 
 
 class UserSerializer(serializers.ModelSerializer):
     profile_data = serializers.SerializerMethodField()
+    license_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "username", "phone", "role", "is_verified", "profile_data"]
+        fields = ["id", "email", "username", "phone", "role", "is_verified", "profile_data", "license_photo"]
         read_only_fields = ["id", "email", "username", "role", "is_verified"]
 
+    def get_license_photo(self, user):
+        profile = getattr(user, "driver_profile", None)
+        if profile and profile.license_photo:
+            request = self.context.get("request")
+            url = profile.license_photo.url
+            return request.build_absolute_uri(url) if request else url
+        return None
+    
     def get_profile_data(self, obj):
         if obj.role == User.Role.CLIENT_COMPANY and hasattr(obj, "company_profile"):
             return {

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db.models import Q
 from django.utils.encoding import force_bytes
@@ -16,7 +16,7 @@ from django.utils.http import urlsafe_base64_encode
 # ───────────────────────────────────────────────────────────────────────────────
 # DRF: Core
 # ───────────────────────────────────────────────────────────────────────────────
-from rest_framework import generics, permissions, exceptions, status
+from rest_framework import generics, permissions, exceptions, status, parsers, views, response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,6 +37,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
 )
+from .utils import validate_license_photo, compress_license_photo
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Settings / Environment
@@ -88,12 +89,17 @@ class CustomTokenView(TokenObtainPairView):
     serializer_class = CustomTokenSerializer
 
 
-class MeView(generics.RetrieveUpdateAPIView):
+class MeView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
     
     
 class ChangePasswordView(APIView):
@@ -204,3 +210,28 @@ class PasswordResetConfirmView(APIView):
             {"detail": "Passwort wurde erfolgreich geändert."},
             status=status.HTTP_200_OK,
         )
+    
+    
+class LicensePhotoUploadView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser]
+
+    def post(self, request):
+        profile = getattr(request.user, "driver_profile", None)
+        if not profile:
+            return response.Response({"detail": "Тільки для водіїв"}, status=403)
+
+        file = request.FILES.get("license_photo")
+        if not file:
+            return response.Response({"detail": "Файл не надано"}, status=400)
+
+        try:
+            validate_license_photo(file)
+            processed = compress_license_photo(file)
+        except ValidationError as e:
+            detail = e.message_dict if hasattr(e, "message_dict") else e.messages[0]
+            return response.Response(detail, status=400)
+
+        profile.license_photo = processed
+        profile.save(update_fields=["license_photo"])
+        return response.Response({"license_photo": profile.license_photo.url})

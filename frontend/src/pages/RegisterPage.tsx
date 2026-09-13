@@ -1,12 +1,14 @@
 
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {useState, type FormEvent, useEffect} from "react";
+import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { Role, type RegisterPayload } from "../auth/types";
 import { toast } from "../components/Notifier";
 import { AuthLayout } from "./AuthLayout";
 import { extractErrorMessage } from "../api/errors.ts";
+import {API_BASE} from "../api/client.ts";
+import axios from "axios";
 
 const ROLE_ORDER: Role[] = [Role.ClientCompany, Role.ClientIndividual, Role.Driver];
 
@@ -31,6 +33,36 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get("invite");
+
+  const [inviteCompanyName, setInviteCompanyName] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [checkingInvite, setCheckingInvite] = useState(Boolean(inviteCode));
+
+  useEffect(() => {
+    if (!inviteCode) return;
+
+    const controller = new AbortController();
+
+    axios
+      .get(`${API_BASE}/fleet/invites/validate/`, {
+        params: { code: inviteCode },
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        setInviteCompanyName(data.company_name);
+        setRole(Role.Driver);
+      })
+      .catch(() => {
+        setInviteError(t("auth.inviteInvalid", "Запрошення недійсне або прострочене"));
+      })
+      .finally(() => setCheckingInvite(false));
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteCode]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -52,6 +84,7 @@ export function RegisterPage() {
         ...(role === Role.ClientCompany && { company_name: companyName, edrpou }),
         ...(role === Role.ClientIndividual && { full_name: fullName }),
         ...(role === Role.Driver && { full_name: fullName, driver_license_number: licenseNumber }),
+        ...(inviteCode && { invite_code: inviteCode }),
       };
       await register(payload);
       toast.success(t("auth.registerSuccess", "Реєстрація успішна!"));
@@ -72,6 +105,16 @@ export function RegisterPage() {
       </div>
 
       <form onSubmit={handleSubmit}>
+        {checkingInvite && <p className="invite-banner checking">{t("auth.checkingInvite", "Перевірка запрошення...")}</p>}
+
+        {inviteCompanyName && (
+          <p className="invite-banner success">
+            {t("auth.registeringForCompany", "Реєстрація водія компанії")} <strong>{inviteCompanyName}</strong>
+          </p>
+        )}
+
+        {inviteError && <p className="invite-banner error">{inviteError}</p>}
+
         <h2>{t("auth.registerTitle")}</h2>
         <p className="lede">{t("auth.registerLede")}</p>
 
@@ -79,8 +122,8 @@ export function RegisterPage() {
           {ROLE_ORDER.map((r) => (
             <div
               key={r}
-              className={`role-chip ${role === r ? "selected" : ""}`}
-              onClick={() => setRole(r)}
+              className={`role-chip ${role === r ? "selected" : ""} ${inviteCompanyName ? "disabled" : ""}`}
+              onClick={() => !inviteCompanyName && setRole(r)}
             >
               {t(`auth.roles.${r}`)}
             </div>
