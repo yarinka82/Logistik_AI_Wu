@@ -500,24 +500,33 @@ idx_track_points_geom
 
 ## 5.10. `shipment_documents`
 
-Документи доставки.
+Електронний документообіг та метадані файлів доставки.
 
-Підтримуються:
+> **Архітектурне правило:** Фізичні бінарні файли (PDF e-CMR, фотопідтвердження e-POD, акти пошкоджень) зберігаються в об'єктному сховищі (S3 / MinIO). База даних PostgreSQL зберігає виключно URL-адреси, S3-ключі та технічні метадані файлів.
 
-- e-CMR;
-- delivery photo;
-- damage act;
-- weight ticket;
-- invoice.
+| Поле | Тип | Обмеження / Призначення |
+|---|---|---|
+| `document_id` | `VARCHAR(32)` | PK, єдиний шаблон `DOC-YYYY-######` |
+| `delivery_id` | `VARCHAR(32)` | FK → `deliveries(delivery_id)` ON UPDATE CASCADE ON DELETE CASCADE |
+| `document_type` | `document_type_enum` | Словник: `electronic_cmr`, `delivery_photo`, `damage_act`, `weight_ticket`, `invoice` |
+| `document_url` | `TEXT` | NOT NULL, пряме посилання або S3 Pre-signed URL / CDN шлях |
+| `s3_object_key` | `VARCHAR(512)` | Ключ об'єкта в бакеті (наприклад, `documents/2026/cmr_DL101.pdf`) |
+| `file_name` | `VARCHAR(255)` | NOT NULL, оригінальна назва файлу (наприклад, `cmr_scan.pdf`) |
+| `file_size_bytes` | `BIGINT` | Розмір файлу в байтах для аудиту та контролю дискових квот S3 |
+| `mime_type` | `VARCHAR(100)` | NOT NULL, DEFAULT `'application/pdf'` (наприклад, `image/jpeg`, `application/pdf`) |
+| `verification_status` | `document_status_enum` | NOT NULL, DEFAULT `'pending'` (`pending`, `confirmed`, `rejected`) |
+| `signed_by_name` | `VARCHAR(100)` | ПІБ особи, яка підписала документ / накладну |
+| `signed_at` | `TIMESTAMPTZ` | Точні дата й час накладання електронного підпису |
+| `signature_geo_location` | `GEOMETRY(Point, 4326)` | PostGIS координати місця підписання e-POD (WGS 84) |
+| `rejection_reason` | `TEXT` | Причина відхилення документа бухгалтерією або замовником |
+| `created_at` | `TIMESTAMPTZ` | DEFAULT CURRENT_TIMESTAMP |
+| `updated_at` | `TIMESTAMPTZ` | DEFAULT CURRENT_TIMESTAMP |
 
-Документ може мати:
+### Індекси таблиці
 
-- URL;
-- статус верифікації;
-- підписанта;
-- час підпису;
-- GPS-координати підписання;
-- причину відхилення.
+```text
+idx_shipment_docs_delivery   ON shipment_documents(delivery_id)
+idx_shipment_docs_status     ON shipment_documents(verification_status)
 
 ---
 
