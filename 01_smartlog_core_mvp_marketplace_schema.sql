@@ -371,12 +371,17 @@ CREATE TABLE delivery_track_points (
     speed_kmh       NUMERIC(5,2)
 );
 
--- 3.8. Electronic Documentation (shipment_documents)
+-- 3.8. Electronic Documentation & File URLs Metadata (shipment_documents)
+-- NOTE: Physical files (PDF, JPG, PNG) are stored in S3/MinIO. PostgreSQL stores only URLs / Object Keys.
 CREATE TABLE shipment_documents (
     document_id                 VARCHAR(32) PRIMARY KEY,                 -- DOC-YYYY-######
     delivery_id                 VARCHAR(32) NOT NULL REFERENCES deliveries(delivery_id) ON UPDATE CASCADE ON DELETE CASCADE,
     document_type               document_type_enum NOT NULL,
-    file_url                    VARCHAR(255) NOT NULL,                   -- S3 Bucket URL
+    document_url                TEXT NOT NULL,                           -- S3 Pre-signed URL or CDN public path
+    s3_object_key               VARCHAR(512),                            -- Key in S3 bucket (e.g., 'documents/2026/cmr_DL101.pdf')
+    file_name                   VARCHAR(255) NOT NULL,                   -- Original filename (e.g., 'cmr_scan.pdf')
+    file_size_bytes             BIGINT,                                  -- File size in bytes for storage tracking
+    mime_type                   VARCHAR(100) NOT NULL DEFAULT 'application/pdf', -- 'application/pdf', 'image/jpeg'
     verification_status         document_status_enum NOT NULL DEFAULT 'pending',
     signed_by_name              VARCHAR(100),
     signed_at                   TIMESTAMPTZ,
