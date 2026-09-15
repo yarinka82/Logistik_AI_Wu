@@ -117,7 +117,7 @@ class DocumentStatus(models.TextChoices):
 
 ALLOWED_COST_SUBTYPES = [
     # fuel
-    'diesel', 'petrol', 'adblue', 'electricity', 'cng_lng',
+    'diesel', 'petrol', 'adblue', 'electricity', 'cng_lng', ############ moved to FLEET ###############
     # maintenance
     'scheduled_service', 'tech_inspection', 'repair', 'tires', 'washing',
     # work_reward
@@ -237,7 +237,7 @@ class Client(models.Model):
     def __str__(self):
         return f"{self.client_id} - {self.full_legal_name}"
 
-
+############ moved to FLEET ###############
 class Vehicle(models.Model):
     vehicle_id = models.CharField(max_length=32, primary_key=True, help_text="VH-####")
     license_plate = models.CharField(max_length=20, unique=True)
