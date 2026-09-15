@@ -19,12 +19,12 @@ class ClientType(models.TextChoices):
     COMPANY = 'company', 'B2B Client (SMB, VAT Payer)'
     SOLO_CARRIER = 'solo_carrier', 'Self-Employed Carrier on Exchange'
 
-
+############ moved to USER ###############
 class DriverType(models.TextChoices):
     SELF_EMPLOYED = 'self_employed', 'Sole Proprietorship (Gewerbe / Solo-Selbstständige)'
     COMPANY_EMPLOYEE = 'company_employee', 'Fleet Company Staff Driver'
 
-
+############ moved to USER ###############
 class DriverStatus(models.TextChoices):
     AVAILABLE = 'available', 'Free to Accept Orders'
     ON_TRIP = 'on_trip', 'On Duty / Executing Delivery'
@@ -264,7 +264,7 @@ class Vehicle(models.Model):
     def __str__(self):
         return f"{self.vehicle_id} ({self.license_plate})"
 
-
+############ moved to USER ###############
 class Driver(models.Model):
     driver_id = models.CharField(max_length=32, primary_key=True, help_text="DR-####")
     linked_client = models.ForeignKey(
