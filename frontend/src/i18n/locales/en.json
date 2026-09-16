@@ -1,5 +1,7 @@
 {
   "auth": {
+    "alsoDrives": "I also drive vehicles myself",
+    "isCarrierCompany": "I have a vehicle fleet or hired drivers — skip entering the license",
     "checkingInvite": "Checking invite...",
     "registeringForCompany": "Registering as driver for",
     "inviteInvalid": "Invite invalid or expired",
@@ -28,7 +30,7 @@
     "registerError": "Registration failed. Please check your data.",
     "username": "Username",
     "companyName": "Company Name",
-    "edrpou": "VAT ID / Trade Register Number",
+    "companyRegistrationNumber": "Company Registration Number (EUID / HRB)",
     "fullName": "Full Name",
     "licenseNumber": "Driver’s License Number",
     "haveAccount": "Already have an account? Switch to “Sign In”.",
@@ -45,12 +47,13 @@
     "statsDrivers": "drivers online",
     "statsCoverage": "countries covered",
     "roles": {
-      "client_company": "Company",
-      "client_individual": "Private client",
+      "client_company": "Client Company",
+      "client_individual": "Individual Client",
+      "carrier_company": "Carrier Company",
       "driver": "Driver",
       "accountant": "Accountant",
-      "admin": "Administrator",
-      "confirmPassword": "Confirm Password"},
+      "admin": "Administrator"
+    },
     "passwordMismatch": "Passwords do not match",
     "loginSuccess": "Successfully logged in!",
     "registerSuccess": "Account successfully created!"

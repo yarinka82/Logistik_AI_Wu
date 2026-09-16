@@ -2,20 +2,19 @@
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import transaction
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from .models import (
-    AccountantProfile,
     ClientCompanyProfile,
     ClientIndividualProfile,
     DriverProfile,
     User,
 )
 from .utils import validate_license_photo, compress_license_photo
+
 
 
 class LoginSerializer(serializers.Serializer):
@@ -44,21 +43,41 @@ class RegisterSerializer(serializers.ModelSerializer):
         User.Role.CLIENT_COMPANY,
         User.Role.CLIENT_INDIVIDUAL,
         User.Role.DRIVER,
+        User.Role.CARRIER_COMPANY,
     }
 
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password]
+    )
     company_name = serializers.CharField(required=False, write_only=True)
-    edrpou = serializers.CharField(required=False, write_only=True)
+    company_registration_number = serializers.CharField(
+        required=False, write_only=True
+    )
     full_name = serializers.CharField(required=False, write_only=True)
-    driver_license_number = serializers.CharField(required=False, write_only=True)
-    invite_code = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    driver_license_number = serializers.CharField(
+        required=False, write_only=True
+    )
     license_photo = serializers.FileField(required=False, write_only=True)
-    
+    also_drives = serializers.BooleanField(
+        required=False, write_only=True, default=False
+    )
+
     class Meta:
         model = User
-        fields = ["email", "username", "phone", "password", "role", "license_photo",
-                  "company_name", "edrpou", "full_name", "driver_license_number", "invite_code"]
-    
+        fields = [
+            "email",
+            "username",
+            "phone",
+            "password",
+            "role",
+            "license_photo",
+            "company_name",
+            "company_registration_number",
+            "full_name",
+            "driver_license_number",
+            "also_drives",
+        ]
+
     def validate_license_photo(self, file):
         validate_license_photo(file)
         return file
@@ -66,63 +85,105 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         role = attrs.get("role")
         if role not in self.PUBLIC_ROLES:
-            raise serializers.ValidationError(
-                {"role": "Diese Rolle kann nicht über die öffentliche Registrierung angelegt werden."}
-            )
-        if role == User.Role.CLIENT_COMPANY and not attrs.get("company_name"):
-            raise serializers.ValidationError("company_name обов'язковий для ролі client_company")
-        if role == User.Role.DRIVER and not attrs.get("driver_license_number"):
-            raise serializers.ValidationError("driver_license_number обов'язковий для ролі driver")
+            raise serializers.ValidationError({
+                "role": (
+                    "Diese Rolle kann nicht über die öffentliche Registrierung"
+                    " angelegt werden."
+                )
+            })
 
-        invite_code = attrs.get("invite_code")
-        self._invite = None
-        if invite_code:
-            from apps.modules.fleet.models import DriverInvite
-            try:
-                invite = DriverInvite.objects.get(code=invite_code)
-            except DriverInvite.DoesNotExist:
-                raise serializers.ValidationError({"invite_code": "Запрошення не знайдено"})
-            if not invite.is_valid():
-                raise serializers.ValidationError({"invite_code": "Запрошення недійсне або прострочене"})
-            self._invite = invite
+        if role == User.Role.CLIENT_COMPANY and not attrs.get("company_name"):
+            raise serializers.ValidationError({
+                "company_name": (
+                    "company_name обов'язковий для ролі client_company"
+                )
+            })
+
+        if role == User.Role.CARRIER_COMPANY:
+            if not attrs.get("company_name"):
+                raise serializers.ValidationError({
+                    "company_name": (
+                        "company_name обов'язковий для перевізника-компанії"
+                    )
+                })
+            if not attrs.get("company_registration_number"):
+                raise serializers.ValidationError({
+                    "company_registration_number": (
+                        "Реєстраційний номер компанії обов'язковий для"
+                        " перевізника-компанії"
+                    )
+                })
+            if attrs.get("also_drives") and not attrs.get(
+                "driver_license_number"
+            ):
+                raise serializers.ValidationError({
+                    "driver_license_number": (
+                        "Обов'язково, якщо перевізник також керує особисто"
+                    )
+                })
+
+        if role == User.Role.DRIVER and not attrs.get("driver_license_number"):
+            raise serializers.ValidationError({
+                "driver_license_number": (
+                    "driver_license_number обов'язковий для ролі driver"
+                )
+            })
+
         return attrs
-    
+
     def create(self, validated_data):
         role = validated_data["role"]
         profile_fields = {
-            k: validated_data.pop(k) for k in
-            ["company_name", "edrpou", "full_name", "driver_license_number"]
+            k: validated_data.pop(k)
+            for k in [
+                "company_name",
+                "company_registration_number",
+                "full_name",
+                "driver_license_number",
+            ]
             if k in validated_data
         }
+        also_drives = validated_data.pop("also_drives", False)
         license_photo = validated_data.pop("license_photo", None)
-        validated_data.pop("invite_code", None)
         password = validated_data.pop("password")
+
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        
+
         if role == User.Role.CLIENT_COMPANY:
             ClientCompanyProfile.objects.create(
                 user=user,
                 company_name=profile_fields.get("company_name", ""),
-                edrpou=profile_fields.get("edrpou", ""),
+                registration_number=profile_fields.get(
+                    "company_registration_number", ""
+                ),
             )
         elif role == User.Role.CLIENT_INDIVIDUAL:
-            ClientIndividualProfile.objects.create(user=user, full_name=profile_fields.get("full_name", ""))
-        elif role == User.Role.DRIVER:
-            employer_profile = self._invite.company.driver_profile if self._invite else None
+            ClientIndividualProfile.objects.create(
+                user=user, full_name=profile_fields.get("full_name", "")
+            )
+        elif role in (User.Role.DRIVER, User.Role.CARRIER_COMPANY):
+            is_carrier_company = role == User.Role.CARRIER_COMPANY
             driver_profile = DriverProfile.objects.create(
                 user=user,
                 full_name=profile_fields.get("full_name", ""),
-                driver_license_number=profile_fields.get("driver_license_number", ""),
-                employer=employer_profile,
+                driver_license_number=profile_fields.get(
+                    "driver_license_number", ""
+                ),
+                company_name=profile_fields.get("company_name", ""),
+                company_registration_number=profile_fields.get(
+                    "company_registration_number", ""
+                ),
+                is_carrier_company=is_carrier_company,
+                also_drives=also_drives if is_carrier_company else True,
             )
             if license_photo:
-                driver_profile.license_photo = compress_license_photo(license_photo)
+                driver_profile.license_photo = compress_license_photo(
+                    license_photo
+                )
                 driver_profile.save(update_fields=["license_photo"])
-            if self._invite:
-                self._invite.used_by = user
-                self._invite.save(update_fields=["used_by"])
+
         return user
 
 
@@ -148,7 +209,7 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.role == User.Role.CLIENT_COMPANY and hasattr(obj, "company_profile"):
             return {
                 "company_name": obj.company_profile.company_name,
-                "edrpou": obj.company_profile.edrpou,
+                "company_registration_number": obj.company_profile.company_registration_number,
             }
         elif obj.role == User.Role.CLIENT_INDIVIDUAL and hasattr(obj, "individual_profile"):
             return {

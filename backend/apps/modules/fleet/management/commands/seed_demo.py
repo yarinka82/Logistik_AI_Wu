@@ -1,17 +1,10 @@
 
 from datetime import date, timedelta
-
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from users.models import (
-    User,
-    ClientCompanyProfile,
-    ClientIndividualProfile,
-    DriverProfile,
-    AccountantProfile,
-)
-from apps.modules.fleet.models import Vehicle, DriverInvite
+from users.models import User, DriverProfile, ClientCompanyProfile, ClientIndividualProfile, AccountantProfile
+from apps.modules.fleet.models import Vehicle
 
 DEMO_PASSWORD = "Test1234!"
 
@@ -38,8 +31,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"\nГотово! Пароль для всіх демо-акаунтів: {DEMO_PASSWORD}"))
 
-    # ------------------------------------------------------------------
-
     def _get_or_create_user(self, email: str, username: str, role: str) -> tuple[User, bool]:
         user, created = User.objects.get_or_create(
             email=email,
@@ -55,10 +46,12 @@ class Command(BaseCommand):
             ("spedition-mueller@example.de", "spedition_mueller", "Spedition Müller GmbH", "DE123456789"),
             ("logi-bauer@example.de", "logi_bauer", "Bauer Logistik GmbH", "DE98765432"),
         ]
-        for email, username, name, edrpou in companies:
+        for email, username, name, company_registration_number in companies:
             user, created = self._get_or_create_user(email, username, User.Role.CLIENT_COMPANY)
             if created:
-                ClientCompanyProfile.objects.create(user=user, company_name=name, edrpou=edrpou)
+                ClientCompanyProfile.objects.create(
+                    user=user, company_name=name, company_registration_number=company_registration_number
+                )
                 self.stdout.write(f"  + {name} ({email})")
 
     def create_client_individuals(self):
@@ -71,22 +64,23 @@ class Command(BaseCommand):
             if created:
                 ClientIndividualProfile.objects.create(user=user, full_name=full_name)
                 self.stdout.write(f"  + {full_name} ({email})")
-
+    
     def create_carrier_with_fleet(self) -> User:
         carrier_user, created = self._get_or_create_user(
             "fracht-team@example.de", "fracht_team", User.Role.DRIVER
         )
-        if created:
-            DriverProfile.objects.create(
-                user=carrier_user,
-                full_name="Fracht Team Spedition",
-                is_carrier_company=True,
-                also_drives=False,
-            )
+        carrier_profile, profile_created = DriverProfile.objects.get_or_create(
+            user=carrier_user,
+            defaults={
+                "full_name": "Fracht Team Spedition",
+                "company_name": "Fracht Team Spedition GmbH",
+                "is_carrier_company": True,
+                "also_drives": False,
+            },
+        )
+        if profile_created:
             self.stdout.write(f"  + Компанія-перевізник: fracht-team@example.de")
-
-        carrier_profile = carrier_user.driver_profile
-
+        
         staff = [
             ("stefan.koch@example.de", "stefan_koch", "Stefan Koch", "DL-4471829"),
             ("mikhail.ivanov@example.de", "mikhail_ivanov", "Mikhail Ivanov", "DL-5583920"),
@@ -101,20 +95,26 @@ class Command(BaseCommand):
                     full_name=full_name,
                     driver_license_number=license_number,
                     employer=carrier_profile,
+                    is_confirmed_by_employer=True,
                 )
                 self.stdout.write(f"    + штатний водій: {full_name} ({email})")
             else:
                 profile = user.driver_profile
             staff_profiles.append(profile)
-
+        
         today = date.today()
+        # plate, brand, model, driver, insurance_exp, tech_exp, gvw_kg, payload_kg, pallets
         vehicles = [
-            ("B-FR-1023", "MAN", "TGX", staff_profiles[0], today + timedelta(days=400), today + timedelta(days=400)),
-            ("B-FR-2044", "Mercedes-Benz", "Actros", staff_profiles[1], today + timedelta(days=12), today + timedelta(days=200)),
-            ("B-FR-3087", "Scania", "R450", staff_profiles[2], today - timedelta(days=5), today + timedelta(days=20)),
-            ("B-FR-4099", "Volvo", "FH16", None, today + timedelta(days=180), today + timedelta(days=180)),
+            ("B-FR-1023", "MAN", "TGX", staff_profiles[0],
+             today + timedelta(days=400), today + timedelta(days=400), 40000, 24000, 33),
+            ("B-FR-2044", "Mercedes-Benz", "Actros", staff_profiles[1],
+             today + timedelta(days=12), today + timedelta(days=200), 40000, 25000, 33),
+            ("B-FR-3087", "Scania", "R450", staff_profiles[2],
+             today - timedelta(days=5), today + timedelta(days=20), 40000, 24500, 33),
+            ("B-FR-4099", "Volvo", "FH16", None,
+             today + timedelta(days=180), today + timedelta(days=180), 44000, 27000, 33),
         ]
-        for plate, brand, model, driver, insurance_exp, tech_exp in vehicles:
+        for plate, brand, model, driver, insurance_exp, tech_exp, gvw, payload, pallets in vehicles:
             vehicle, created = Vehicle.objects.get_or_create(
                 plate_number=plate,
                 defaults={
@@ -124,20 +124,20 @@ class Command(BaseCommand):
                     "assigned_driver": driver,
                     "insurance_expiry": insurance_exp,
                     "tech_inspection_expiry": tech_exp,
+                    "gross_vehicle_weight_kg": gvw,
+                    "payload_capacity_kg": payload,
+                    "pallet_capacity": pallets,
+                    "vehicle_type": "truck",
+                    "is_test": True,
                 },
             )
             if created:
                 self.stdout.write(f"    + авто: {plate} ({brand} {model})")
+        
 
-        # Один невикористаний інвайт для тестування форми реєстрації по коду
-        DriverInvite.objects.get_or_create(
-            company=carrier_user,
-            code="DEMO1234",
-            defaults={"expires_at": today + timedelta(days=30)},
-        )
-
+        
         return carrier_user
-
+    
     def create_solo_driver(self):
         user, created = self._get_or_create_user(
             "hans.zimmer@example.de", "hans_zimmer", User.Role.DRIVER
@@ -158,6 +158,11 @@ class Command(BaseCommand):
                     "model": "Daily",
                     "insurance_expiry": date.today() + timedelta(days=90),
                     "tech_inspection_expiry": date.today() + timedelta(days=90),
+                    "gross_vehicle_weight_kg": 3500,
+                    "payload_capacity_kg": 1200.00,
+                    "pallet_capacity": 6,
+                    "vehicle_type": "van",
+                    "is_test": True,
                 },
             )
             self.stdout.write(f"  + Водій-одноосібник: hans.zimmer@example.de")

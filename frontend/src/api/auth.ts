@@ -18,8 +18,12 @@ export function forgotPasswordRequest(email: string) {
   return authClient.post("/password-reset/", { email });
 }
 
-export function resetPasswordConfirmRequest(uid: string, token: string, newPassword: string) {
-  return authClient.post("/password-reset/confirm/", { uid, token, new_password: newPassword });
+export function resetPasswordConfirmRequest(payload: {
+  uid: string;
+  token: string;
+  new_password: string;
+}) {
+  return authClient.post("/password-reset-confirm/", payload);
 }
 
 export function fetchMeRequest(api: AxiosInstance) {
