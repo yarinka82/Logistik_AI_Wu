@@ -96,6 +96,22 @@
     "sending": "Senden..."
   },
   "fleet": {
+    "employerTitle": "Anstellung beim Transportunternehmen",
+    "statusConfirmed": "Im Unternehmen angestellt",
+    "statusPending": "Wartet auf Bestätigung",
+    "leaveCompanyBtn": "Unternehmen verlassen",
+    "confirmLeave": "Möchten Sie das Unternehmen wirklich verlassen?",
+    "leftCompany": "Sie haben das Unternehmen verlassen",
+    "appliedTo": "Bewerbung gesendet an:",
+    "pendingReviewDesc": "Der Fuhrparkleiter muss Ihre Anfrage genehmigen.",
+    "selectCompanyDesc": "Wenn Sie für ein Transportunternehmen fahren, wählen Sie es aus der Liste aus, um eine Beitrittsanfrage zu stellen:",
+    "chooseCompanyPlaceholder": "Unternehmen aus der Liste wählen...",
+    "chooseCompanyWarning": "Bitte wählen Sie ein Unternehmen aus der Liste",
+    "sendJoinRequest": "Anfrage senden",
+    "joinRequestSent": "Anfrage erfolgreich gesendet! Warten Sie auf die Bestätigung.",
+    "joinRequestCancelled": "Anfrage abgebrochen",
+    "joinRequestError": "Fehler beim Senden der Anfrage",
+    "driverIdNotFound": "Fahrerprofil nicht gefunden",
     "photoColumn": "Foto",
     "editDriver": "Bearbeiten",
     "removeDriver": "Aus dem Team entfernen",
@@ -123,6 +139,7 @@
     "noVehicles": "Noch keine Fahrzeuge."
   },
   "nav": {
+    "loading": "Laden...",
     "dashboard": "Dashboard",
     "fleet": "Mein Fuhrpark",
     "accountant": "Buchhaltung"

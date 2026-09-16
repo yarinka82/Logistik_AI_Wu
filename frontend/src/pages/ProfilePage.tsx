@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "../components/Notifier";
 import { changePasswordRequest, updateProfileRequest, uploadLicensePhotoRequest } from "../api/auth";
-import {extractErrorMessage, translateUploadError} from "../api/errors.ts";
+import { extractErrorMessage, translateUploadError } from "../api/errors";
+import { DriverCompanySection } from "../components/DriverCompanySection";
 import "./ProfilePage.css";
+import { Role } from "../auth/types";
 
 export const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
@@ -74,193 +76,204 @@ export const ProfilePage: React.FC = () => {
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      } catch (err: unknown) {
-        const msg = extractErrorMessage(err, t("profile.passwordError", "Не вдалося змінити пароль"));
-        toast.error(msg);
-
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, t("profile.passwordError", "Не вдалося змінити пароль"));
+      toast.error(msg);
     } finally {
       setSavingPassword(false);
     }
   };
 
-return (
-  <div className="profile-container">
-    <div className="profile-stack">
-      {/*Card 1: Personal details*/}
-      <div className="profile-card">
-        <h2 className="profile-title">
-          {t("profile.title", "Особисті дані")}
-        </h2>
-        <p className="profile-subtitle">
-          {t("profile.subtitle", "Керуйте своїми контактними та обліковими даними")}
-        </p>
+  const isDriver = user?.role === Role.Driver;
 
-        <form onSubmit={handleSaveProfile} className="profile-form">
-          <div className="form-group">
-            <label className="form-label muted">Email</label>
-            <input type="text" value={user?.email || ""} disabled className="form-input" />
-          </div>
+  return (
+    <div className="profile-container">
+      {/* Левая колонка: Личные данные и Пароль */}
+      <div className="profile-stack">
+        {/* Карточка 1: Личные данные */}
+        <div className="profile-card">
+          <h2 className="profile-title">{t("profile.title", "Особисті дані")}</h2>
+          <p className="profile-subtitle">
+            {t("profile.subtitle", "Керуйте своїми контактними та обліковими даними")}
+          </p>
 
-          <div className="form-group">
-            <label className="form-label muted">
-              {t("auth.username", "Ім'я користувача")}
-            </label>
-            <input type="text" value={user?.username || ""} disabled className="form-input" />
-          </div>
+          <form onSubmit={handleSaveProfile} className="profile-form">
+            <div className="form-group">
+              <label className="form-label muted">Email</label>
+              <input type="text" value={user?.email || ""} disabled className="form-input" />
+            </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              {t("profile.phone", "Телефон")}
-            </label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+49 123 456789"
-              className="form-input"
-            />
-          </div>
+            <div className="form-group">
+              <label className="form-label muted">
+                {t("auth.username", "Ім'я користувача")}
+              </label>
+              <input type="text" value={user?.username || ""} disabled className="form-input" />
+            </div>
 
-          <button type="submit" disabled={savingProfile} className="btn-submit">
-            {savingProfile ? t("common.saving", "Збереження...") : t("common.save", "Зберегти зміни")}
-          </button>
-        </form>
-      </div>
-
-      {/*Card 2: Password Change*/}
-      <div className="profile-card">
-        <h2 className="profile-title">
-          {t("profile.securityTitle", "Безпека та зміна пароля")}
-        </h2>
-        <p className="profile-subtitle">
-          {t("profile.securityDesc", "Введіть поточний пароль для встановлення нового")}
-        </p>
-
-        <form onSubmit={handleChangePassword} className="profile-form">
-          <div className="form-group">
-            <label className="form-label">
-              {t("profile.oldPassword", "Поточний пароль")}
-            </label>
-            <div className="password-wrap">
+            <div className="form-group">
+              <label className="form-label">{t("profile.phone", "Телефон")}</label>
               <input
-                type={showOldPassword ? "text" : "password"}
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                required
-                placeholder="••••••••"
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+49 123 456789"
                 className="form-input"
               />
-              <button
-                type="button"
-                onClick={() => setShowOldPassword((v) => !v)}
-                className="eye-btn"
-                tabIndex={-1}
-                aria-label="Toggle password visibility"
-              >
-                {showOldPassword ? "🙈" : "👁"}
-              </button>
             </div>
-          </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              {t("profile.newPassword", "Новий пароль")}
-            </label>
-            <div className="password-wrap">
-              <input
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="form-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword((v) => !v)}
-                className="eye-btn"
-                tabIndex={-1}
-                aria-label="Toggle password visibility"
-              >
-                {showNewPassword ? "🙈" : "👁"}
-              </button>
+            <button type="submit" disabled={savingProfile} className="btn-submit">
+              {savingProfile ? t("common.saving", "Збереження...") : t("common.save", "Зберегти зміни")}
+            </button>
+          </form>
+        </div>
+
+        {/* Карточка 2: Безопасность и пароль */}
+        <div className="profile-card">
+          <h2 className="profile-title">{t("profile.securityTitle", "Безпека та зміна пароля")}</h2>
+          <p className="profile-subtitle">
+            {t("profile.securityDesc", "Введіть поточний пароль для встановлення нового")}
+          </p>
+
+          <form onSubmit={handleChangePassword} className="profile-form">
+            <div className="form-group">
+              <label className="form-label">{t("profile.oldPassword", "Поточний пароль")}</label>
+              <div className="password-wrap">
+                <input
+                  type={showOldPassword ? "text" : "password"}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowOldPassword((v) => !v)}
+                  className="eye-btn"
+                  tabIndex={-1}
+                  aria-label="Toggle password visibility"
+                >
+                  {showOldPassword ? "🙈" : "👁"}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              {t("profile.confirmNewPassword", "Підтвердження нового пароля")}
-            </label>
-            <div className="password-wrap">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="form-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                className="eye-btn"
-                tabIndex={-1}
-                aria-label="Toggle password visibility"
-              >
-                {showConfirmPassword ? "🙈" : "👁"}
-              </button>
+            <div className="form-group">
+              <label className="form-label">{t("profile.newPassword", "Новий пароль")}</label>
+              <div className="password-wrap">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="eye-btn"
+                  tabIndex={-1}
+                  aria-label="Toggle password visibility"
+                >
+                  {showNewPassword ? "🙈" : "👁"}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={savingPassword}
-            className="btn-submit btn-submit-success"
-          >
-            {savingPassword
-              ? t("common.saving", "Збереження...")
-              : t("profile.updatePasswordBtn", "Оновити пароль")}
-          </button>
-        </form>
-      </div>
-    </div>
+            <div className="form-group">
+              <label className="form-label">
+                {t("profile.confirmNewPassword", "Підтвердження нового пароля")}
+              </label>
+              <div className="password-wrap">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="eye-btn"
+                  tabIndex={-1}
+                  aria-label="Toggle password visibility"
+                >
+                  {showConfirmPassword ? "🙈" : "👁"}
+                </button>
+              </div>
+            </div>
 
-    {user?.role === "driver" && (
-      <div className="profile-card license-card">
-        <h2 className="profile-title">{t("profile.licenseTitle", "Права водія")}</h2>
-        <p className="profile-subtitle">
-          {t("profile.licenseSubtitle", "Завантажте фото або скан посвідчення водія")}
-        </p>
-
-        <div className="profile-form">
-          {licensePhotoUrl && (
-            licensePhotoUrl.toLowerCase().endsWith(".pdf") ? (
-              <iframe
-                src={licensePhotoUrl}
-                title="license-pdf"
-                style={{ width: "100%", maxWidth: "400px", height: "500px", border: "none", borderRadius: "8px", marginBottom: "12px" }}
-              />
-            ) : (
-              <img
-                src={licensePhotoUrl}
-                alt=""
-                style={{ maxWidth: "240px", borderRadius: "8px", marginBottom: "12px" }}
-              />
-            )
-          )}
-
-          <div className="form-group">
-            <label className="form-label">{t("profile.licensePhoto", "Фото прав")}</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,application/pdf"
-              onChange={handlePhotoSelect}
-              disabled={uploadingPhoto}
-              className="form-input"
-            />
-          </div>
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="btn-submit btn-submit-success"
+            >
+              {savingPassword
+                ? t("common.saving", "Збереження...")
+                : t("profile.updatePasswordBtn", "Оновити пароль")}
+            </button>
+          </form>
         </div>
       </div>
-    )}
-  </div>
-)};
+
+      {/* Правая колонка для водителя: Сверху компания, снизу права */}
+      {isDriver && (
+        <div className="profile-stack">
+          {/* 1. Блок работы в компании (выше прав) */}
+          <DriverCompanySection />
+
+          {/* 2. Карточка прав водителя */}
+          <div className="profile-card license-card">
+            <h2 className="profile-title">{t("profile.licenseTitle", "Права водія")}</h2>
+            <p className="profile-subtitle">
+              {t("profile.licenseSubtitle", "Завантажте фото або скан посвідчення водія")}
+            </p>
+
+            <div className="profile-form">
+              {licensePhotoUrl &&
+                (licensePhotoUrl.toLowerCase().endsWith(".pdf") ? (
+                  <iframe
+                    src={licensePhotoUrl}
+                    title="license-pdf"
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      height: "400px",
+                      border: "none",
+                      borderRadius: "8px",
+                      marginBottom: "12px",
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={licensePhotoUrl}
+                    alt=""
+                    style={{
+                      maxWidth: "240px",
+                      borderRadius: "8px",
+                      marginBottom: "12px",
+                      display: "block",
+                    }}
+                  />
+                ))}
+
+              <div className="form-group">
+                <label className="form-label">{t("profile.licensePhoto", "Фото прав")}</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,application/pdf"
+                  onChange={handlePhotoSelect}
+                  disabled={uploadingPhoto}
+                  className="form-input"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

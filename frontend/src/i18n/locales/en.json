@@ -95,6 +95,22 @@
     "sending": "Sending..."
   },
   "fleet": {
+    "employerTitle": "Employment at Carrier Company",
+    "statusConfirmed": "Employed at Company",
+    "statusPending": "Pending Confirmation",
+    "leaveCompanyBtn": "Leave Company",
+    "confirmLeave": "Are you sure you want to leave the company?",
+    "leftCompany": "You have left the company",
+    "appliedTo": "Application sent to:",
+    "pendingReviewDesc": "The fleet manager must approve your application in their dashboard.",
+    "selectCompanyDesc": "If you drive for a carrier company, select it from the list below to submit a join request:",
+    "chooseCompanyPlaceholder": "Select a company from the list...",
+    "chooseCompanyWarning": "Please select a company from the list",
+    "sendJoinRequest": "Submit Request",
+    "joinRequestSent": "Request submitted successfully! Waiting for company approval.",
+    "joinRequestCancelled": "Request cancelled",
+    "joinRequestError": "Failed to submit request",
+    "driverIdNotFound": "Driver profile not found",
     "photoColumn": "Photo",
     "editDriver": "Edit",
     "removeDriver": "Remove from team",
@@ -124,6 +140,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "fleet": "My Fleet",
+    "loading": "Loading...",
     "accountant": "Accounting"
   }
 

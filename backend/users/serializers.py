@@ -11,7 +11,7 @@ from .models import (
     ClientCompanyProfile,
     ClientIndividualProfile,
     DriverProfile,
-    User,
+    User, CarrierCompanyProfile,
 )
 from .utils import validate_license_photo, compress_license_photo
 
@@ -38,6 +38,7 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     PUBLIC_ROLES = {
         User.Role.CLIENT_COMPANY,
@@ -45,37 +46,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         User.Role.DRIVER,
         User.Role.CARRIER_COMPANY,
     }
-
-    password = serializers.CharField(
-        write_only=True, validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     company_name = serializers.CharField(required=False, write_only=True)
-    company_registration_number = serializers.CharField(
-        required=False, write_only=True
-    )
+    company_registration_number = serializers.CharField(required=False, write_only=True)
     full_name = serializers.CharField(required=False, write_only=True)
-    driver_license_number = serializers.CharField(
-        required=False, write_only=True
-    )
+    driver_license_number = serializers.CharField(required=False, write_only=True)
     license_photo = serializers.FileField(required=False, write_only=True)
-    also_drives = serializers.BooleanField(
-        required=False, write_only=True, default=False
-    )
+    also_drives = serializers.BooleanField(required=False, write_only=True, default=False)
 
     class Meta:
         model = User
         fields = [
-            "email",
-            "username",
-            "phone",
-            "password",
-            "role",
-            "license_photo",
-            "company_name",
-            "company_registration_number",
-            "full_name",
-            "driver_license_number",
-            "also_drives",
+            "email", "username", "phone", "password", "role",
+            "license_photo", "company_name", "company_registration_number",
+            "full_name", "driver_license_number", "also_drives",
         ]
 
     def validate_license_photo(self, file):
@@ -85,49 +69,21 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         role = attrs.get("role")
         if role not in self.PUBLIC_ROLES:
-            raise serializers.ValidationError({
-                "role": (
-                    "Diese Rolle kann nicht über die öffentliche Registrierung"
-                    " angelegt werden."
-                )
-            })
+            raise serializers.ValidationError({"role": "Diese Rolle kann nicht über die öffentliche Registrierung angelegt werden."})
 
         if role == User.Role.CLIENT_COMPANY and not attrs.get("company_name"):
-            raise serializers.ValidationError({
-                "company_name": (
-                    "company_name обов'язковий для ролі client_company"
-                )
-            })
+            raise serializers.ValidationError({"company_name": "company_name обов'язковий для ролі client_company"})
 
         if role == User.Role.CARRIER_COMPANY:
             if not attrs.get("company_name"):
-                raise serializers.ValidationError({
-                    "company_name": (
-                        "company_name обов'язковий для перевізника-компанії"
-                    )
-                })
+                raise serializers.ValidationError({"company_name": "company_name обов'язковий для перевізника-компанії"})
             if not attrs.get("company_registration_number"):
-                raise serializers.ValidationError({
-                    "company_registration_number": (
-                        "Реєстраційний номер компанії обов'язковий для"
-                        " перевізника-компанії"
-                    )
-                })
-            if attrs.get("also_drives") and not attrs.get(
-                "driver_license_number"
-            ):
-                raise serializers.ValidationError({
-                    "driver_license_number": (
-                        "Обов'язково, якщо перевізник також керує особисто"
-                    )
-                })
+                raise serializers.ValidationError({"company_registration_number": "Реєстраційний номер компанії обов'язковий"})
+            if attrs.get("also_drives") and not attrs.get("driver_license_number"):
+                raise serializers.ValidationError({"driver_license_number": "Обов'язково, якщо перевізник також керує особисто"})
 
         if role == User.Role.DRIVER and not attrs.get("driver_license_number"):
-            raise serializers.ValidationError({
-                "driver_license_number": (
-                    "driver_license_number обов'язковий для ролі driver"
-                )
-            })
+            raise serializers.ValidationError({"driver_license_number": "driver_license_number обов'язковий для ролі driver"})
 
         return attrs
 
@@ -135,12 +91,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         role = validated_data["role"]
         profile_fields = {
             k: validated_data.pop(k)
-            for k in [
-                "company_name",
-                "company_registration_number",
-                "full_name",
-                "driver_license_number",
-            ]
+            for k in ["company_name", "company_registration_number", "full_name", "driver_license_number"]
             if k in validated_data
         }
         also_drives = validated_data.pop("also_drives", False)
@@ -155,34 +106,39 @@ class RegisterSerializer(serializers.ModelSerializer):
             ClientCompanyProfile.objects.create(
                 user=user,
                 company_name=profile_fields.get("company_name", ""),
-                registration_number=profile_fields.get(
-                    "company_registration_number", ""
-                ),
+                company_registration_number=profile_fields.get("company_registration_number", ""),
             )
+
         elif role == User.Role.CLIENT_INDIVIDUAL:
             ClientIndividualProfile.objects.create(
                 user=user, full_name=profile_fields.get("full_name", "")
             )
-        elif role in (User.Role.DRIVER, User.Role.CARRIER_COMPANY):
-            is_carrier_company = role == User.Role.CARRIER_COMPANY
+
+        elif role == User.Role.DRIVER:
             driver_profile = DriverProfile.objects.create(
                 user=user,
                 full_name=profile_fields.get("full_name", ""),
-                driver_license_number=profile_fields.get(
-                    "driver_license_number", ""
-                ),
-                company_name=profile_fields.get("company_name", ""),
-                company_registration_number=profile_fields.get(
-                    "company_registration_number", ""
-                ),
-                is_carrier_company=is_carrier_company,
-                also_drives=also_drives if is_carrier_company else True,
+                driver_license_number=profile_fields.get("driver_license_number", ""),
             )
             if license_photo:
-                driver_profile.license_photo = compress_license_photo(
-                    license_photo
-                )
+                driver_profile.license_photo = compress_license_photo(license_photo)
                 driver_profile.save(update_fields=["license_photo"])
+
+        elif role == User.Role.CARRIER_COMPANY:
+            CarrierCompanyProfile.objects.create(
+                user=user,
+                company_name=profile_fields.get("company_name", ""),
+                company_registration_number=profile_fields.get("company_registration_number", ""),
+            )
+            if also_drives:
+                driver_profile = DriverProfile.objects.create(
+                    user=user,
+                    full_name=profile_fields.get("company_name", ""),
+                    driver_license_number=profile_fields.get("driver_license_number", ""),
+                )
+                if license_photo:
+                    driver_profile.license_photo = compress_license_photo(license_photo)
+                    driver_profile.save(update_fields=["license_photo"])
 
         return user
 
@@ -194,7 +150,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "username", "phone", "role", "is_verified", "profile_data", "license_photo"]
+        fields = [
+            "id",
+            "email",
+            "username",
+            "phone",
+            "role",
+            "is_verified",
+            "profile_data",
+            "license_photo",
+        ]
         read_only_fields = ["id", "email", "username", "role", "is_verified"]
 
     def get_license_photo(self, user):
@@ -206,20 +171,61 @@ class UserSerializer(serializers.ModelSerializer):
         return None
     
     def get_profile_data(self, obj):
-        if obj.role == User.Role.CLIENT_COMPANY and hasattr(obj, "company_profile"):
+        # 1. Компания-перевозчик (новая роль)
+        if (
+            obj.role == User.Role.CARRIER_COMPANY
+            and hasattr(obj, "carrier_company_profile")
+        ):
             return {
-                "company_name": obj.company_profile.company_name,
-                "company_registration_number": obj.company_profile.company_registration_number,
+                "id": obj.carrier_company_profile.id,
+                "company_name": obj.carrier_company_profile.company_name,
+                "company_registration_number": (
+                    obj.carrier_company_profile.company_registration_number
+                ),
             }
-        elif obj.role == User.Role.CLIENT_INDIVIDUAL and hasattr(obj, "individual_profile"):
+
+        # 2. Клиент (юрлицо)
+        elif (
+            obj.role == User.Role.CLIENT_COMPANY
+            and hasattr(obj, "client_company_profile")
+        ):
             return {
-                "full_name": obj.individual_profile.full_name,
+                "company_name": obj.client_company_profile.company_name,
+                "company_registration_number": (
+                    obj.client_company_profile.company_registration_number
+                ),
             }
+
+        # 3. Клиент (физлицо)
+        elif (
+            obj.role == User.Role.CLIENT_INDIVIDUAL
+            and hasattr(obj, "client_individual_profile")
+        ):
+            return {
+                "full_name": obj.client_individual_profile.full_name,
+            }
+
+        # 4. Водитель (может быть с компанией или без)
         elif obj.role == User.Role.DRIVER and hasattr(obj, "driver_profile"):
+            driver = obj.driver_profile
+            employer_data = None
+            if driver.employer:
+                employer_data = {
+                    "id": driver.employer.id,
+                    "company_name": driver.employer.company_name,
+                    "company_registration_number": (
+                        driver.employer.company_registration_number
+                    ),
+                }
+
             return {
-                "full_name": obj.driver_profile.full_name,
-                "driver_license_number": obj.driver_profile.driver_license_number,
+                "id": driver.id,
+                "full_name": driver.full_name,
+                "driver_license_number": driver.driver_license_number,
+                "is_confirmed_by_employer": driver.is_confirmed_by_employer,
+                "employer": employer_data,  #  null, если водитель одиночка
             }
+
         return {}
     
     

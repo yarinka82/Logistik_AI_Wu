@@ -1,9 +1,9 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import { LanguageSwitch } from "../i18n/LanguageSwitch";
-import { ThemeToggle } from "../theme/ThemeToggle";
 import { Role } from "../auth/types";
+import {ThemeToggle} from "../theme/ThemeToggle.tsx";
+import {LanguageSwitch} from "../i18n/LanguageSwitch.tsx";
 import "./MainLayout.css";
 
 interface NavItem {
@@ -16,7 +16,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "dashboard", fallback: "Дашборд", end: true, roles: null },
-  { to: "/fleet", label: "fleet", fallback: "Мій автопарк", end: false, roles: [Role.Driver] },
+  {
+    to: "/fleet",
+    label: "fleet",
+    fallback: "Мій автопарк",
+    end: false,
+    roles: [Role.CarrierCompany, Role.Driver]
+  },
   {
     to: "/accountant",
     label: "accountant",
@@ -31,26 +37,54 @@ export function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const visibleNav = NAV_ITEMS.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => !item.roles || (user && item.roles.includes(user.role))
+  );
+
+  const getRoleLabel = (role?: Role): string => {
+    if (!role) return "User";
+
+    switch (role) {
+      case Role.CarrierCompany:
+        return t("auth.roles.carrier_company", { defaultValue: "Перевізник (Компанія)" });
+      case Role.Driver:
+        return t("auth.roles.driver", { defaultValue: "Водій" });
+      case Role.ClientCompany:
+        return t("auth.roles.client_company", { defaultValue: "Клієнт (Компанія)" });
+      case Role.ClientIndividual:
+        return t("auth.roles.client_individual", { defaultValue: "Клієнт (Фіз. особа)" });
+      case Role.Accountant:
+        return t("auth.roles.accountant", { defaultValue: "Бухгалтер" });
+      case Role.Admin:
+        return t("auth.roles.admin", { defaultValue: "Адміністратор" });
+      default: {
+        const key = `auth.roles.${role}`;
+        return t(key, { defaultValue: role });
+      }
+    }
+  };
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand" onClick={() => navigate("/")}>
+        <div className="brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
           Fracht<span className="brand-dot">.</span>Markt
         </div>
 
         <nav className="sidebar-nav">
-          {visibleNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-            >
-              {t(`nav.${item.label}`, item.fallback)}
-            </NavLink>
-          ))}
+          {visibleNav.map((item) => {
+            const navKey = `nav.${item.label}`;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+              >
+                {t(navKey, { defaultValue: item.fallback })}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
@@ -65,19 +99,20 @@ export function MainLayout() {
           <div
             className="user-profile-btn"
             onClick={() => navigate("/profile")}
-            title={t("profile.editTitle", "Налаштування профілю")}
+            title={t("profile.editTitle", { defaultValue: "Налаштування профілю" })}
+            style={{ cursor: "pointer" }}
           >
             <div className="user-avatar">
               {(user?.username?.[0] || user?.email?.[0] || "U").toUpperCase()}
             </div>
             <div className="user-text">
               <div className="user-name">{user?.username || user?.email}</div>
-              <div className="user-role">{user?.role ? t(`auth.roles.${user.role}`, user.role) : "User"}</div>
+              <div className="user-role">{getRoleLabel(user?.role)}</div>
             </div>
           </div>
 
           <button onClick={logout} className="logout-btn">
-            {t("auth.logout", "Вийти")}
+            {t("auth.logout", { defaultValue: "Вийти" })}
           </button>
         </header>
 

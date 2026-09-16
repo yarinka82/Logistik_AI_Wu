@@ -8,7 +8,6 @@ from django.utils import timezone
 from users.models import User
 
 
-
 class Vehicle(models.Model):
     class FuelType(models.TextChoices):
         DIESEL = "diesel", "Diesel"
@@ -16,10 +15,10 @@ class Vehicle(models.Model):
         ELECTRIC = "electric", "Electric"
         HYBRID = "hybrid", "Hybrid"
         LPG = "lpg", "LPG"
-
+    
     carrier = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="vehicles",
-        limit_choices_to={"role": User.Role.DRIVER},
+        limit_choices_to={"role": User.Role.CARRIER_COMPANY},
     )
     plate_number = models.CharField(max_length=20, unique=True)
     brand = models.CharField(max_length=100, blank=True)
@@ -36,7 +35,6 @@ class Vehicle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # --- новые поля аналитики ---
     vehicle_ref = models.CharField(
         max_length=32, unique=True, null=True, blank=True,
         help_text="Внешний ID для аналитики, формат VH-####",
@@ -71,7 +69,6 @@ class Vehicle(models.Model):
             ),
         ]
     
-   
     @property
     def insurance_expiring_soon(self) -> bool:
         if not self.insurance_expiry:

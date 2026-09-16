@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import date
 
 from users.models import User, DriverProfile
-from apps.modules.fleet.models import Vehicle  # путь поправь под реальную структуру
+from apps.modules.fleet.models import Vehicle
 
 DEMO_PASSWORD = "Test1234!"
 
