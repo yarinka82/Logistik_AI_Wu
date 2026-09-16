@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fleet', '0003_alter_vehicle_gross_vehicle_weight_kg_and_more'),
+        
         ('users', '0003_alter_clientcompanyprofile_edrpou'),
     ]
 

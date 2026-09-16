@@ -1,5 +1,7 @@
 {
   "auth": {
+    "alsoDrives": "Ich fahre auch selbst",
+    "isCarrierCompany": "Ich habe einen Fuhrpark/angestellte Fahrer – Lizenzeingabe überspringen",
     "checkingInvite": "Einladung wird geprüft...",
     "registeringForCompany": "Registrierung als Fahrer für",
     "inviteInvalid": "Einladung ungültig oder abgelaufen",
@@ -28,7 +30,7 @@
     "registerError": "Registrierung fehlgeschlagen. Bitte Daten prüfen.",
     "username": "Benutzername",
     "companyName": "Firmenname",
-    "edrpou": "USt-IdNr. / Handelsregisternummer",
+    "companyRegistrationNumber": "Handelsregisternummer (EUID / HRB)",
     "fullName": "Vollständiger Name",
     "licenseNumber": "Führerscheinnummer",
     "haveAccount": "Schon ein Konto? Zu „Anmelden“ wechseln.",
@@ -45,8 +47,9 @@
     "statsDrivers": "Fahrer online",
     "statsCoverage": "Länder Abdeckung",
     "roles": {
-      "client_company": "Firma",
+      "client_company": "Kundenfirma",
       "client_individual": "Privatkunde",
+      "carrier_company": "Transportunternehmen",
       "driver": "Fahrer",
       "accountant": "Buchhalter",
       "admin": "Administrator"

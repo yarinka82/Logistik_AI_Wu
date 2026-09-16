@@ -3,6 +3,7 @@ export const Role = {
   ClientCompany: "client_company",
   ClientIndividual: "client_individual",
   Driver: "driver",
+  CarrierCompany: "carrier_company",
   Accountant: "accountant",
   Admin: "admin",
 } as const;
@@ -31,7 +32,7 @@ export interface RegisterPayload {
   password: string;
   role: Role;
   company_name?: string;
-  edrpou?: string;
+  company_registration_number?: string;
   full_name?: string;
   driver_license_number?: string;
 }

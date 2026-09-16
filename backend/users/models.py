@@ -1,6 +1,11 @@
+from datetime import timedelta
+from django.utils import timezone
+
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+
 
 
 class User(AbstractUser):
@@ -8,6 +13,7 @@ class User(AbstractUser):
         CLIENT_COMPANY = "client_company", "Замовник — фірма"
         CLIENT_INDIVIDUAL = "client_individual", "Замовник — фізична особа"
         DRIVER = "driver", "Водій / перевізник"
+        CARRIER_COMPANY = "carrier_company", "Перевізник — компанія"
         ACCOUNTANT = "accountant", "Бухгалтер"
         ADMIN = "admin", "Адміністратор системи"
 
@@ -21,11 +27,17 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["username", "role"]
 
 
+
 class ClientCompanyProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile")
     company_name = models.CharField(max_length=255)
-    edrpou = models.CharField(max_length=15, unique=True)
+    company_registration_number = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="EUID або національний реєстраційний номер компанії (напр. HRB для Німеччини)",
+    )
     legal_address = models.CharField(max_length=500, blank=True)
+
 
 
 class ClientIndividualProfile(models.Model):
@@ -33,8 +45,9 @@ class ClientIndividualProfile(models.Model):
     full_name = models.CharField(max_length=255)
 
 
+
 class DriverProfile(models.Model):
-    
+
     class DriverType(models.TextChoices):
         SELF_EMPLOYED = 'self_employed', 'Sole Proprietorship (Gewerbe / Solo-Selbstständige)'
         COMPANY_EMPLOYEE = 'company_employee', 'Fleet Company Staff Driver'
@@ -44,15 +57,37 @@ class DriverProfile(models.Model):
         ON_TRIP = 'on_trip', 'On Duty / Executing Delivery'
         OFF_DUTY = 'off_duty', 'Rest Period / Mandatory Break'
         INACTIVE = 'inactive', 'Account Blocked or Suspended'
-        
+
+    REMINDER_WINDOW_DAYS = 30
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="driver_profile")
     full_name = models.CharField(max_length=255)
     driver_license_number = models.CharField(max_length=50, blank=True)
-    vehicle_info = models.CharField(max_length=255, blank=True)
     license_photo = models.FileField(upload_to="driver_licenses/", blank=True, null=True)
 
     is_carrier_company = models.BooleanField(default=False)
     also_drives = models.BooleanField(default=True)
+
+    company_name = models.CharField(max_length=255, blank=True)
+    company_registration_number = models.CharField(max_length=50, blank=True)
+
+    driver_type = models.CharField(
+        max_length=20,
+        choices=DriverType.choices,
+        blank=True,
+        help_text="Автоматично визначається на основі is_carrier_company/employer, якщо не вказано явно",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=DriverStatus.choices,
+        default=DriverStatus.AVAILABLE,
+    )
+
+    is_confirmed_by_employer = models.BooleanField(
+        default=False,
+        help_text="Підтверджено керівником компанії-перевізника як штатний водій",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
 
     employer = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL,
@@ -91,6 +126,47 @@ class DriverProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    def save(self, *args, **kwargs):
+        if not self.driver_type:
+            self.driver_type = (
+                self.DriverType.COMPANY_EMPLOYEE
+                if self.employer_id
+                else self.DriverType.SELF_EMPLOYED
+            )
+        super().save(*args, **kwargs)
+        
+    def clean(self):
+        super().clean()
+        if self.is_carrier_company and not self.company_name:
+            raise ValidationError({"company_name": "Обов'язково для перевізника-компанії"})
+        if not self.is_carrier_company and not self.driver_license_number:
+            raise ValidationError({"driver_license_number": "Обов'язково для водія"})
+        if self.is_carrier_company and self.also_drives and not self.driver_license_number:
+            raise ValidationError({"driver_license_number": "Обов'язково, якщо перевізник також керує сам"})
+        if self.employer_id:
+            if self.employer_id == self.pk:
+                raise ValidationError("Не можна подати заявку самому собі.")
+            if self.is_carrier_company:
+                raise ValidationError("Перевізник-компанія не може бути найманим водієм.")
+
+    @property
+    def license_expiring_soon(self) -> bool:
+        if not self.driving_license_expiry_date:
+            return False
+        return self.driving_license_expiry_date <= timezone.now().date() + timedelta(days=self.REMINDER_WINDOW_DAYS)
+
+    @property
+    def code_95_expiring_soon(self) -> bool:
+        if not self.code_95_expiry_date:
+            return False
+        return self.code_95_expiry_date <= timezone.now().date() + timedelta(days=self.REMINDER_WINDOW_DAYS)
+
+    @property
+    def adr_expiring_soon(self) -> bool:
+        if not self.adr_expiry_date:
+            return False
+        return self.adr_expiry_date <= timezone.now().date() + timedelta(days=self.REMINDER_WINDOW_DAYS)
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -118,6 +194,13 @@ class DriverProfile(models.Model):
                         (models.Q(has_adr=True) & models.Q(adr_expiry_date__isnull=False))
                 ),
                 name="chk_driver_adr_consistency",
+            ),
+            models.CheckConstraint(
+                condition=(
+                        (models.Q(is_carrier_company=False)) |
+                        (models.Q(is_carrier_company=True) & ~models.Q(company_name=""))
+                ),
+                name="chk_carrier_company_has_name",
             ),
         ]
 

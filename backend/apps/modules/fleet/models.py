@@ -1,4 +1,4 @@
-import secrets
+
 from datetime import timedelta
 
 from django.core.validators import MinValueValidator
@@ -6,34 +6,6 @@ from django.db import models
 from django.utils import timezone
 
 from users.models import User
-
-
-def generate_invite_code() -> str:
-    return secrets.token_urlsafe(8)[:10].upper()
-
-
-class DriverInvite(models.Model):
-    company = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="driver_invites",
-        limit_choices_to={"role": User.Role.DRIVER},
-    )
-    code = models.CharField(max_length=12, unique=True, default=generate_invite_code)
-    used_by = models.OneToOneField(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="used_invite"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-
-    def is_valid(self) -> bool:
-        return self.used_by_id is None and self.expires_at > timezone.now()
-
-    def save(self, *args, **kwargs):
-        if not self.expires_at:
-            self.expires_at = timezone.now() + timedelta(days=7)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.code
 
 
 
@@ -86,13 +58,11 @@ class Vehicle(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(gross_vehicle_weight_kg__gt=0)
-                          | models.Q(gross_vehicle_weight_kg__isnull=True),
+                condition=models.Q(gross_vehicle_weight_kg__gt=0),
                 name="chk_vehicle_gvw_positive",
             ),
             models.CheckConstraint(
-                condition=models.Q(payload_capacity_kg__gt=0)
-                          | models.Q(payload_capacity_kg__isnull=True),
+                condition=models.Q(payload_capacity_kg__gt=0),
                 name="chk_vehicle_payload_positive",
             ),
             models.CheckConstraint(
@@ -100,7 +70,8 @@ class Vehicle(models.Model):
                 name="chk_vehicle_pallet_non_negative",
             ),
         ]
-
+    
+   
     @property
     def insurance_expiring_soon(self) -> bool:
         if not self.insurance_expiry:
