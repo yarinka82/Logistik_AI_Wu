@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
-import { Role } from "./auth/types";
+
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -12,6 +12,8 @@ import { ResetPasswordConfirmPage } from "./pages/ResetPasswordConfirmPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
+import {VehicleDetailPage} from "./pages/VehicleDetailPage.tsx";
+import {Role} from "./types";
 
 
 export default function App() {
@@ -38,6 +40,7 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/fleet" element={<FleetPage />} />
+            <Route path="/fleet/vehicles/:id" element={<VehicleDetailPage />} />
             {/*Access only for accountant and admin*/}
             <Route
               path="/accountant"

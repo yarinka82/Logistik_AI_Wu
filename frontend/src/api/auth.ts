@@ -1,6 +1,7 @@
 import type { AxiosInstance } from "axios";
 import { authClient } from "./client";
-import type { LoginPayload, RegisterPayload, TokenPair, User } from "../auth/types";
+import type {LoginPayload, RegisterPayload, TokenPair, User} from "../types";
+
 
 export function loginRequest(payload: LoginPayload) {
   return authClient.post<TokenPair>("/login/", payload);

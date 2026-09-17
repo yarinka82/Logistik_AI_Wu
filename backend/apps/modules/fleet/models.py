@@ -8,7 +8,6 @@ from django.utils import timezone
 from users.models import User
 
 
-
 class Vehicle(models.Model):
     class FuelType(models.TextChoices):
         DIESEL = "diesel", "Diesel"
@@ -16,10 +15,10 @@ class Vehicle(models.Model):
         ELECTRIC = "electric", "Electric"
         HYBRID = "hybrid", "Hybrid"
         LPG = "lpg", "LPG"
-
+    
     carrier = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="vehicles",
-        limit_choices_to={"role": User.Role.DRIVER},
+        limit_choices_to={"role": User.Role.CARRIER_COMPANY},
     )
     plate_number = models.CharField(max_length=20, unique=True)
     brand = models.CharField(max_length=100, blank=True)
@@ -36,15 +35,13 @@ class Vehicle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # --- новые поля аналитики ---
     vehicle_ref = models.CharField(
         max_length=32, unique=True, null=True, blank=True,
         help_text="Внешний ID для аналитики, формат VH-####",
     )
     vehicle_type = models.CharField(max_length=32, blank=True)
     gross_vehicle_weight_kg = models.IntegerField(validators=[MinValueValidator(1)])
-    payload_capacity_kg = models.DecimalField(max_digits=10,
-                          decimal_places=2, validators=[MinValueValidator(0.01)])
+    payload_capacity_kg = models.IntegerField(validators=[MinValueValidator(1)])
     pallet_capacity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     fuel_type = models.CharField(max_length=20, choices=FuelType.choices, default=FuelType.DIESEL)
     euro_emission_class = models.CharField(
@@ -71,7 +68,6 @@ class Vehicle(models.Model):
             ),
         ]
     
-   
     @property
     def insurance_expiring_soon(self) -> bool:
         if not self.insurance_expiry:

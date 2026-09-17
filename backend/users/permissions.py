@@ -1,14 +1,20 @@
 
-from rest_framework.permissions import BasePermission
+from rest_framework import permissions
 
 
-class IsCarrierOwner(BasePermission):
+class IsCarrierCompany(permissions.BasePermission):
+    """Доступ только для компаний-перевозчиков."""
+
     def has_permission(self, request, view):
-        profile = getattr(request.user, "driver_profile", None)
-        return bool(profile and profile.is_carrier_company)
-    
-    
-class IsOwnDriverProfile(BasePermission):
-    """Редактирование/удаление собственного профиля — только сам водитель."""
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and hasattr(request.user, "carrier_company_profile")
+        )
+
+
+class IsOwnDriverProfile(permissions.BasePermission):
+    """Водитель может управлять только своим профилем."""
+
     def has_object_permission(self, request, view, obj):
-        return obj.user_id == request.user.id
+        return obj.user == request.user
