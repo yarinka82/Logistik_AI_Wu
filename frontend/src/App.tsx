@@ -14,6 +14,7 @@ import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
 import {VehicleDetailPage} from "./pages/VehicleDetailPage.tsx";
 import {Role} from "./types";
+import {DriverDetailPage} from "./pages/Driverdetailpage.tsx";
 
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/fleet" element={<FleetPage />} />
             <Route path="/fleet/vehicles/:id" element={<VehicleDetailPage />} />
+            <Route path="/fleet/drivers/:id" element={<DriverDetailPage />} />
             {/*Access only for accountant and admin*/}
             <Route
               path="/accountant"

@@ -8,10 +8,9 @@ import {
   requestJoinCompanyRequest,
   cancelJoinRequestRequest,
   leaveCompanyRequest,
-  type CarrierCompany,
 } from "../api/fleet";
 import { toast } from "../components/Notifier";
-import type {DriverProfileData} from "../types";
+import type {CarrierCompany, DriverProfileData} from "../types";
 
 export function DriverCompanySection() {
   const { t } = useTranslation();
