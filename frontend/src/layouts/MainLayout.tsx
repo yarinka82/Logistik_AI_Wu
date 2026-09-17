@@ -1,10 +1,10 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import { Role } from "../auth/types";
 import {ThemeToggle} from "../theme/ThemeToggle.tsx";
 import {LanguageSwitch} from "../i18n/LanguageSwitch.tsx";
 import "./MainLayout.css";
+import {Role} from "../types";
 
 interface NavItem {
   to: string;

@@ -6,7 +6,8 @@ import { changePasswordRequest, updateProfileRequest, uploadLicensePhotoRequest 
 import { extractErrorMessage, translateUploadError } from "../api/errors";
 import { DriverCompanySection } from "../components/DriverCompanySection";
 import "./ProfilePage.css";
-import { Role } from "../auth/types";
+import {Role} from "../types";
+
 
 export const ProfilePage: React.FC = () => {
   const { t } = useTranslation();

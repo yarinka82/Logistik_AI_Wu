@@ -79,12 +79,20 @@ class StaffDriverUpdateSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     insurance_expiring_soon = serializers.BooleanField(read_only=True)
     tech_inspection_expiring_soon = serializers.BooleanField(read_only=True)
-    assigned_driver_name = serializers.CharField(source="assigned_driver.full_name", read_only=True, default=None)
+    assigned_driver_name = serializers.CharField(
+        source="assigned_driver.full_name", read_only=True, default=None
+    )
 
     class Meta:
         model = Vehicle
         fields = [
             "id", "plate_number", "brand", "model",
+            "vehicle_type",
+            "gross_vehicle_weight_kg",
+            "payload_capacity_kg",
+            "pallet_capacity",
+            "fuel_type",
+            "euro_emission_class",
             "assigned_driver", "assigned_driver_name",
             "insurance_expiry", "tech_inspection_expiry",
             "insurance_expiring_soon", "tech_inspection_expiring_soon",

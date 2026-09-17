@@ -26,11 +26,17 @@ export interface Vehicle {
   plate_number: string;
   brand: string;
   model: string;
-  assigned_driver_name: string | null;
+  vehicle_type: string;
+  gross_vehicle_weight_kg: number;
+  payload_capacity_kg: number;
+  pallet_capacity: number;
+  fuel_type: "diesel" | "petrol" | "electric" | "hybrid" | "lpg";
+  euro_emission_class: string;
   insurance_expiry: string | null;
   tech_inspection_expiry: string | null;
-  insurance_expiring_soon: boolean;
-  tech_inspection_expiring_soon: boolean;
+  vehicle_ref: string | null;
+  assigned_driver_name?: string | null;
+  is_active: boolean;
 }
 
 export interface NewVehiclePayload {
@@ -39,6 +45,18 @@ export interface NewVehiclePayload {
   model?: string;
   insurance_expiry?: string | null;
   tech_inspection_expiry?: string | null;
+}
+
+export interface CreateVehiclePayload {
+  plate_number: string;
+  brand?: string;
+  model?: string;
+  vehicle_type?: string;
+  gross_vehicle_weight_kg: number;      // обязательное в модели
+  payload_capacity_kg: number;          // обязательное в модели
+  pallet_capacity?: number;
+  fuel_type?: Vehicle["fuel_type"];
+  euro_emission_class?: string;
 }
 
 // --- Водії (панель власника) ---
@@ -90,12 +108,20 @@ export function fetchVehiclesRequest(api: AxiosInstance, signal?: AbortSignal) {
   return api.get<Vehicle[]>("/fleet/vehicles/", { signal });
 }
 
-export function createVehicleRequest(api: AxiosInstance, payload: NewVehiclePayload) {
+export function fetchVehicleRequest(api: AxiosInstance, id: number | string, signal?: AbortSignal) {
+  return api.get<Vehicle>(`/fleet/vehicles/${id}/`, { signal });
+}
+
+export function createVehicleRequest(api: AxiosInstance, payload: CreateVehiclePayload) {
   return api.post<Vehicle>("/fleet/vehicles/", payload);
 }
 
-export function updateVehicleRequest(api: AxiosInstance, vehicleId: number, payload: Partial<NewVehiclePayload>) {
-  return api.patch<Vehicle>(`/fleet/vehicles/${vehicleId}/`, payload);
+export function updateVehicleRequest(
+  api: AxiosInstance,
+  id: number | string,
+  payload: Partial<CreateVehiclePayload> & { insurance_expiry?: string | null; tech_inspection_expiry?: string | null }
+) {
+  return api.patch<Vehicle>(`/fleet/vehicles/${id}/`, payload);
 }
 
 export function assignDriverToVehicleRequest(api: AxiosInstance, vehicleId: number, driverId: number | null) {

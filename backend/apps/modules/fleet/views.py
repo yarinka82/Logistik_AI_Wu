@@ -86,8 +86,6 @@ class StaffDriverViewSet(viewsets.ModelViewSet):
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
-    """Управление автопарком компании."""
-
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated, IsCarrierCompany]
 
@@ -95,13 +93,10 @@ class VehicleViewSet(viewsets.ModelViewSet):
         carrier = getattr(self.request.user, "carrier_company_profile", None)
         if not carrier:
             return Vehicle.objects.none()
-        # Если в модели Vehicle carrier=ForeignKey(CarrierCompanyProfile):
-        return Vehicle.objects.filter(carrier=self.request.user).select_related(
-            "assigned_driver"
-        )
+        # carrier у Vehicle — это FK на User, а не на CarrierCompanyProfile
+        return Vehicle.objects.filter(carrier=self.request.user).select_related("assigned_driver")
 
     def perform_create(self, serializer):
-        carrier = self.request.user.carrier_company_profile
         serializer.save(carrier=self.request.user)
 
 

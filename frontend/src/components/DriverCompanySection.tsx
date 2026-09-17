@@ -11,7 +11,7 @@ import {
   type CarrierCompany,
 } from "../api/fleet";
 import { toast } from "../components/Notifier";
-import type { DriverProfileData } from "../auth/types";
+import type {DriverProfileData} from "../types";
 
 export function DriverCompanySection() {
   const { t } = useTranslation();

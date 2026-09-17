@@ -14,9 +14,9 @@ import axios, {
   type AxiosError,
   type InternalAxiosRequestConfig,
 } from "axios";
-import type { User, LoginPayload, RegisterPayload } from "./types";
 import { loginRequest, registerRequest, refreshTokenRequest, fetchMeRequest } from "../api/auth";
 import { API_BASE } from "../api/client";
+import type {LoginPayload, RegisterPayload, User} from "../types";
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;

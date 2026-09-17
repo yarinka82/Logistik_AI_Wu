@@ -41,8 +41,7 @@ class Vehicle(models.Model):
     )
     vehicle_type = models.CharField(max_length=32, blank=True)
     gross_vehicle_weight_kg = models.IntegerField(validators=[MinValueValidator(1)])
-    payload_capacity_kg = models.DecimalField(max_digits=10,
-                          decimal_places=2, validators=[MinValueValidator(0.01)])
+    payload_capacity_kg = models.IntegerField(validators=[MinValueValidator(1)])
     pallet_capacity = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     fuel_type = models.CharField(max_length=20, choices=FuelType.choices, default=FuelType.DIESEL)
     euro_emission_class = models.CharField(

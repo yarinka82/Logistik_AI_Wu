@@ -3,10 +3,11 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import { Role, type RegisterPayload } from "../auth/types";
+
 import { toast } from "../components/Notifier";
 import { AuthLayout } from "./AuthLayout";
 import { extractErrorMessage } from "../api/errors";
+import {type RegisterPayload, Role} from "../types";
 
 const ROLE_ORDER: Role[] = [
   Role.ClientCompany,

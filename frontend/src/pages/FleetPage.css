@@ -127,6 +127,8 @@
   border-bottom: none;
 }
 
+.company-picker-modal { min-width: 900px; max-width: 900px; }
+
 .clickable-row {
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -337,4 +339,109 @@
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+/* ==========================================================================
+   7. VEHICLE DETAIL (CARD, KEY-VALUE GRID, EDIT FORM)
+   ========================================================================== */
+.employment-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.vehicle-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 14px 24px;
+  margin: 0;
+  align-items: baseline;
+}
+
+.vehicle-detail-grid dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.vehicle-detail-grid dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .vehicle-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+  }
+  .vehicle-detail-grid dt {
+    margin-top: 14px;
+  }
+}
+
+/* Поля формы редактирования */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+.field label {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.field input,
+.field select {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--accent, #00d2b4);
+}
+
+.confirm-modal-actions {
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   8. PRIMARY BUTTON
+   ========================================================================== */
+.btn-primary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent, #00d2b4);
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
