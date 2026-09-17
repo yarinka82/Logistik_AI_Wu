@@ -1,6 +1,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import "./FleetPage.css";
 import {
@@ -17,9 +18,31 @@ import { toast } from "../components/Notifier";
 type Tab = "drivers" | "vehicles";
 type DriverFilter = "all" | "pending" | "confirmed";
 
+function getExpiryStatus(dateStr: string | null): "expired" | "soon" | "ok" {
+  if (!dateStr) return "ok";
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return "expired";
+  const diffDays = (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= 30 ? "soon" : "ok";
+}
+
+function ExpiryBadge({ dateStr }: { dateStr: string | null }) {
+  const { t } = useTranslation();
+  const status = getExpiryStatus(dateStr);
+  if (status === "ok") return null;
+  return status === "expired" ? (
+    <span className="badge-danger">{t("fleet.expired", "Прострочено")}</span>
+  ) : (
+    <span className="badge-warning">{t("fleet.expiringSoon", "Спливає")}</span>
+  );
+}
+
 export function FleetPage() {
   const { t } = useTranslation();
   const { api } = useAuth();
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<Tab>("drivers");
   const [driverFilter, setDriverFilter] = useState<DriverFilter>("all");
@@ -30,7 +53,6 @@ export function FleetPage() {
   const [driverToDismiss, setDriverToDismiss] = useState<StaffDriver | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
-  // Загрузка водителей
   const loadDrivers = useCallback(
     async (signal?: AbortSignal) => {
       try {
@@ -44,7 +66,6 @@ export function FleetPage() {
     [api, driverFilter]
   );
 
-  // Загрузка транспорта
   const loadVehicles = useCallback(
     async (signal?: AbortSignal) => {
       try {
@@ -66,7 +87,6 @@ export function FleetPage() {
     return () => controller.abort();
   }, [loadDrivers, loadVehicles]);
 
-  // Действия с водителем
   const handleApprove = async (driver: StaffDriver) => {
     try {
       await approveDriverRequest(api, driver.id);
@@ -106,45 +126,25 @@ export function FleetPage() {
       <h1>{t("fleet.title", "Управління автопарком")}</h1>
 
       <div className="fleet-tabs">
-        <div
-          className={`fleet-tab ${tab === "drivers" ? "active" : ""}`}
-          onClick={() => setTab("drivers")}
-        >
+        <div className={`fleet-tab ${tab === "drivers" ? "active" : ""}`} onClick={() => setTab("drivers")}>
           {t("fleet.tabDrivers", "Водії")}
           {pendingCount > 0 && <span className="tab-badge">{pendingCount}</span>}
         </div>
-        <div
-          className={`fleet-tab ${tab === "vehicles" ? "active" : ""}`}
-          onClick={() => setTab("vehicles")}
-        >
+        <div className={`fleet-tab ${tab === "vehicles" ? "active" : ""}`} onClick={() => setTab("vehicles")}>
           {t("fleet.tabVehicles", "Транспорт")} ({vehicles.length})
         </div>
       </div>
 
-      {/* Вкладка Водители */}
       {tab === "drivers" && (
         <div className="fleet-content">
-          {/* Фильтры статуса */}
           <div className="filter-chips" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            <button
-              type="button"
-              className={`filter-btn ${driverFilter === "all" ? "active" : ""}`}
-              onClick={() => setDriverFilter("all")}
-            >
+            <button type="button" className={`filter-btn ${driverFilter === "all" ? "active" : ""}`} onClick={() => setDriverFilter("all")}>
               {t("fleet.allDrivers", "Всі")}
             </button>
-            <button
-              type="button"
-              className={`filter-btn ${driverFilter === "pending" ? "active" : ""}`}
-              onClick={() => setDriverFilter("pending")}
-            >
+            <button type="button" className={`filter-btn ${driverFilter === "pending" ? "active" : ""}`} onClick={() => setDriverFilter("pending")}>
               {t("fleet.pendingDrivers", "Заявки")} {pendingCount > 0 && `(${pendingCount})`}
             </button>
-            <button
-              type="button"
-              className={`filter-btn ${driverFilter === "confirmed" ? "active" : ""}`}
-              onClick={() => setDriverFilter("confirmed")}
-            >
+            <button type="button" className={`filter-btn ${driverFilter === "confirmed" ? "active" : ""}`} onClick={() => setDriverFilter("confirmed")}>
               {t("fleet.confirmedDrivers", "У штаті")}
             </button>
           </div>
@@ -167,7 +167,7 @@ export function FleetPage() {
               </thead>
               <tbody>
                 {drivers.map((d) => (
-                  <tr key={d.id}>
+                  <tr key={d.id} className="clickable-row" onClick={() => navigate(`/fleet/drivers/${d.id}`)}>
                     <td><strong>{d.full_name}</strong></td>
                     <td>
                       <div>{d.email}</div>
@@ -175,18 +175,14 @@ export function FleetPage() {
                     </td>
                     <td>
                       {d.driver_license_number || "—"}
-                      {d.license_expiring_soon && (
-                        <span className="badge-warning" style={{ marginLeft: "6px" }}>
-                          {t("fleet.expiringSoon", "Спливає")}
-                        </span>
-                      )}
+                      <ExpiryBadge dateStr={d.driving_license_expiry_date} />
                     </td>
                     <td>
                       {d.license_photo ? (
                         d.license_photo.toLowerCase().endsWith(".pdf") ? (
                           <div
                             className="pdf-thumb"
-                            onClick={() => setPreviewPhoto(d.license_photo)}
+                            onClick={(e) => { e.stopPropagation(); setPreviewPhoto(d.license_photo); }}
                             title={t("fleet.viewPdf", "Переглянути PDF")}
                           >
                             📄
@@ -196,7 +192,7 @@ export function FleetPage() {
                             src={d.license_photo}
                             alt=""
                             className="license-thumb"
-                            onClick={() => setPreviewPhoto(d.license_photo)}
+                            onClick={(e) => { e.stopPropagation(); setPreviewPhoto(d.license_photo); }}
                           />
                         )
                       ) : (
@@ -213,29 +209,11 @@ export function FleetPage() {
                     <td className="row-actions" style={{ textAlign: "right" }}>
                       {!d.is_confirmed_by_employer ? (
                         <>
-                          <button
-                            className="btn-action-approve"
-                            onClick={() => handleApprove(d)}
-                            title={t("fleet.approve", "Прийняти")}
-                          >
-                            ✅
-                          </button>
-                          <button
-                            className="btn-action-reject"
-                            onClick={() => handleReject(d)}
-                            title={t("fleet.reject", "Відхилити")}
-                          >
-                            ❌
-                          </button>
+                          <button className="btn-action-approve" onClick={(e) => { e.stopPropagation(); handleApprove(d); }} title={t("fleet.approve", "Прийняти")}>✅</button>
+                          <button className="btn-action-reject" onClick={(e) => { e.stopPropagation(); handleReject(d); }} title={t("fleet.reject", "Відхилити")}>❌</button>
                         </>
                       ) : (
-                        <button
-                          className="btn-action-dismiss"
-                          onClick={() => setDriverToDismiss(d)}
-                          title={t("fleet.dismissDriver", "Відкріпити")}
-                        >
-                          🗑️
-                        </button>
+                        <button className="btn-action-dismiss" onClick={(e) => { e.stopPropagation(); setDriverToDismiss(d); }} title={t("fleet.dismissDriver", "Відкріпити")}>🗑️</button>
                       )}
                     </td>
                   </tr>
@@ -246,7 +224,6 @@ export function FleetPage() {
         </div>
       )}
 
-      {/* Вкладка Транспорт */}
       {tab === "vehicles" && (
         <div className="fleet-content">
           {vehicles.length === 0 ? (
@@ -266,21 +243,17 @@ export function FleetPage() {
               </thead>
               <tbody>
                 {vehicles.map((v) => (
-                  <tr key={v.id}>
+                  <tr key={v.id} className="clickable-row" onClick={() => navigate(`/fleet/vehicles/${v.id}`)}>
                     <td><strong>{v.plate_number}</strong></td>
                     <td>{v.brand} {v.model}</td>
                     <td>{v.assigned_driver_name ?? "—"}</td>
                     <td>
                       {v.insurance_expiry ?? "—"}
-                      {v.insurance_expiring_soon && (
-                        <span className="badge-warning">{t("fleet.expiringSoon", "Спливає")}</span>
-                      )}
+                      <ExpiryBadge dateStr={v.insurance_expiry} />
                     </td>
                     <td>
                       {v.tech_inspection_expiry ?? "—"}
-                      {v.tech_inspection_expiring_soon && (
-                        <span className="badge-warning">{t("fleet.expiringSoon", "Спливає")}</span>
-                      )}
+                      <ExpiryBadge dateStr={v.tech_inspection_expiry} />
                     </td>
                   </tr>
                 ))}
@@ -290,34 +263,23 @@ export function FleetPage() {
         </div>
       )}
 
-      {/* Модальное окно подтверждения увольнения */}
       {driverToDismiss && (
         <div className="confirm-modal-backdrop" onClick={() => setDriverToDismiss(null)}>
           <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
             <p>{t("fleet.confirmDismiss", "Ви впевнені, що хочете відкріпити водія від компанії?")}</p>
             <p className="confirm-modal-name"><strong>{driverToDismiss.full_name}</strong></p>
             <div className="confirm-modal-actions">
-              <button className="btn-secondary" onClick={() => setDriverToDismiss(null)}>
-                {t("common.cancel", "Скасувати")}
-              </button>
-              <button className="btn-danger" onClick={handleDismiss}>
-                {t("fleet.dismiss", "Відкріпити")}
-              </button>
+              <button className="btn-secondary" onClick={() => setDriverToDismiss(null)}>{t("common.cancel", "Скасувати")}</button>
+              <button className="btn-danger" onClick={handleDismiss}>{t("fleet.dismiss", "Відкріпити")}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Модалка предпросмотра прав */}
       {previewPhoto && (
         <div className="photo-modal" onClick={() => setPreviewPhoto(null)}>
           {previewPhoto.toLowerCase().endsWith(".pdf") ? (
-            <iframe
-              src={previewPhoto}
-              title="license-pdf"
-              className="pdf-modal-frame"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <iframe src={previewPhoto} title="license-pdf" className="pdf-modal-frame" onClick={(e) => e.stopPropagation()} />
           ) : (
             <img src={previewPhoto} alt="" onClick={(e) => e.stopPropagation()} />
           )}
