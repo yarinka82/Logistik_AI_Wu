@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
 import { toast } from "../components/Notifier";
-import { AuthLayout } from "./AuthLayout";
 import { resetPasswordConfirmRequest } from "../api/auth";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
 
 
 export const ResetPasswordConfirmPage: React.FC = () => {

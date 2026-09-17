@@ -4,8 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { toast } from "../components/Notifier";
-import { AuthLayout } from "./AuthLayout";
 import { extractErrorMessage } from "../api/errors";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
 
 export function LoginPage() {
   const { t } = useTranslation();
