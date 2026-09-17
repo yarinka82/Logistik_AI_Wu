@@ -76,6 +76,77 @@ class StaffDriverUpdateSerializer(serializers.ModelSerializer):
 
 
 
+class StaffDriverDetailSerializer(serializers.ModelSerializer):
+    """GET (detail) + PATCH для одного водія з панелі компанії."""
+    email = serializers.EmailField(source="user.email", read_only=True)
+    phone = serializers.CharField(source="user.phone", read_only=True)
+    is_active = serializers.BooleanField(source="user.is_active", read_only=True)
+    license_expiring_soon = serializers.BooleanField(read_only=True)
+    code_95_expiring_soon = serializers.BooleanField(read_only=True)
+    adr_expiring_soon = serializers.BooleanField(read_only=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # default_vehicle можна вибирати тільки з транспорту тієї ж компанії
+        request = self.context.get("request")
+        if request is not None:
+            carrier = getattr(request.user, "carrier_company_profile", None)
+            self.fields["default_vehicle"].queryset = (
+                Vehicle.objects.filter(carrier=request.user) if carrier
+                else Vehicle.objects.none()
+            )
+    
+    def validate(self, attrs):
+        categories = attrs.get("code_95_categories", getattr(self.instance, "code_95_categories", None))
+        expiry = attrs.get("code_95_expiry_date", getattr(self.instance, "code_95_expiry_date", None))
+        has_categories = bool(categories) if not isinstance(categories, str) else bool(categories.strip())
+
+        if has_categories and not expiry:
+            raise serializers.ValidationError(
+                {"code_95_expiry_date": "Вкажіть дату дії коду 95."}
+            )
+        if expiry and not has_categories:
+            raise serializers.ValidationError(
+                {"code_95_categories": "Вкажіть категорії коду 95."}
+            )
+        return attrs
+    
+    class Meta:
+        model = DriverProfile
+        fields = [
+            "id",
+            # редагується компанією
+            "full_name",
+            "driver_license_number",
+            "base_city",
+            "driving_license_categories",
+            "driving_license_expiry_date",
+            "code_95_categories",
+            "code_95_expiry_date",
+            "has_adr",
+            "adr_expiry_date",
+            "default_vehicle",
+            # тільки читання
+            "license_photo",
+            "email",
+            "phone",
+            "is_active",
+            "status",
+            "is_confirmed_by_employer",
+            "confirmed_at",
+            "license_expiring_soon",
+            "code_95_expiring_soon",
+            "adr_expiring_soon",
+        ]
+        read_only_fields = [
+            "id", "license_photo", "email", "phone", "is_active", "status",
+            "is_confirmed_by_employer", "confirmed_at",
+            "license_expiring_soon", "code_95_expiring_soon", "adr_expiring_soon",
+        ]
+
+
+
+
 class VehicleSerializer(serializers.ModelSerializer):
     insurance_expiring_soon = serializers.BooleanField(read_only=True)
     tech_inspection_expiring_soon = serializers.BooleanField(read_only=True)

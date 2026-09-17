@@ -14,15 +14,11 @@ import {
   requestJoinCompanyRequest,
   cancelJoinRequestRequest,
   leaveCompanyRequest,
-  createVehicleRequest,
-  type CreateVehiclePayload,
-  type StaffDriver,
-  type Vehicle,
-  type CarrierCompany,
+  createVehicleRequest
 } from "../api/fleet";
 
 import { toast } from "../components/Notifier";
-import {Role} from "../types";
+import {type CarrierCompany, type CreateVehiclePayload, Role, type StaffDriver, type Vehicle} from "../types";
 
 
 type Tab = "drivers" | "vehicles" | "employment";

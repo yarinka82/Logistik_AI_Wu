@@ -5,12 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import {
   fetchVehicleRequest,
-  updateVehicleRequest,
-  type Vehicle,
-  type CreateVehiclePayload,
+  updateVehicleRequest
 } from "../api/fleet";
 import { toast } from "../components/Notifier";
 import "./FleetPage.css";
+import type {CreateVehiclePayload, Vehicle} from "../types";
 
 function ExpiryBadge({ dateStr }: { dateStr: string | null }) {
   const { t } = useTranslation();

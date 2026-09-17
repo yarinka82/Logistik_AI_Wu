@@ -12,7 +12,7 @@ from users.models import DriverProfile, CarrierCompanyProfile
 from users.permissions import IsOwnDriverProfile, IsCarrierCompany
 from .models import Vehicle
 from .serializers import VehicleSerializer, StaffDriverListSerializer, CarrierCompanyListSerializer, \
-    DriverProfileSerializer
+    DriverProfileSerializer, StaffDriverDetailSerializer
 
 
 class StaffDriverViewSet(viewsets.ModelViewSet):
@@ -20,8 +20,13 @@ class StaffDriverViewSet(viewsets.ModelViewSet):
 
     serializer_class = StaffDriverListSerializer
     permission_classes = [IsAuthenticated, IsCarrierCompany]
-    http_method_names = ["get", "post", "head"]
-
+    http_method_names = ["get", "post", "patch", "head"]
+    
+    def get_serializer_class(self):
+        if self.action in ("retrieve", "partial_update"):
+            return StaffDriverDetailSerializer
+        return StaffDriverListSerializer
+    
     def get_queryset(self):
         carrier = getattr(self.request.user, "carrier_company_profile", None)
         if not carrier:
