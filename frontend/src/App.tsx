@@ -14,7 +14,8 @@ import { MainLayout } from "./layouts/MainLayout";
 import Notifier from "./components/Notifier";
 import {VehicleDetailPage} from "./pages/VehicleDetailPage.tsx";
 import {Role} from "./types";
-import {DriverDetailPage} from "./pages/Driverdetailpage.tsx";
+import {DriverDetailPage} from "./pages/DriverDetailPage.tsx";
+
 
 
 export default function App() {

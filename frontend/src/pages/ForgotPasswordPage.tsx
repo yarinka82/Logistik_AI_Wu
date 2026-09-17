@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "../components/Notifier";
 import { forgotPasswordRequest } from "../api/auth";
 import { extractErrorMessage } from "../api/errors";
-import { AuthLayout } from "./AuthLayout";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
 
 export const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation();

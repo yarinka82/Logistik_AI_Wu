@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 
 import { toast } from "../components/Notifier";
-import { AuthLayout } from "./AuthLayout";
 import { extractErrorMessage } from "../api/errors";
 import {type RegisterPayload, Role} from "../types";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
 
 const ROLE_ORDER: Role[] = [
   Role.ClientCompany,
