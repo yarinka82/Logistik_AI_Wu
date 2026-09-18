@@ -1,45 +1,15 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import {ThemeToggle} from "../theme/ThemeToggle.tsx";
-import {LanguageSwitch} from "../i18n/LanguageSwitch.tsx";
+import { Role } from "../types";
+import { Sidebar } from "../components/Sidebar";
 import "./MainLayout.css";
-import {Role} from "../types";
-
-interface NavItem {
-  to: string;
-  label: string;
-  fallback: string;
-  end: boolean;
-  roles: Role[] | null;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "dashboard", fallback: "Дашборд", end: true, roles: null },
-  {
-    to: "/fleet",
-    label: "fleet",
-    fallback: "Мій автопарк",
-    end: false,
-    roles: [Role.CarrierCompany, Role.Driver]
-  },
-  {
-    to: "/accountant",
-    label: "accountant",
-    fallback: "Бухгалтерія",
-    end: false,
-    roles: [Role.Accountant, Role.Admin],
-  },
-];
+import {LanguageSwitch} from "../components/LanguageSwitch.tsx";
 
 export function MainLayout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => !item.roles || (user && item.roles.includes(user.role))
-  );
 
   const getRoleLabel = (role?: Role): string => {
     if (!role) return "User";
@@ -66,41 +36,18 @@ export function MainLayout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          Fracht<span className="brand-dot">.</span>Markt
-        </div>
+      <Sidebar />
 
-        <nav className="sidebar-nav">
-          {visibleNav.map((item) => {
-            const navKey = `nav.${item.label}`;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-              >
-                {t(navKey, { defaultValue: item.fallback })}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer">
-          <ThemeToggle />
-        </div>
-      </aside>
-
+      {/* Основная правая область */}
       <div className="app-main">
         <header className="topbar">
           <LanguageSwitch />
 
+          {/* Плашка пользователя */}
           <div
             className="user-profile-btn"
             onClick={() => navigate("/profile")}
             title={t("profile.editTitle", { defaultValue: "Налаштування профілю" })}
-            style={{ cursor: "pointer" }}
           >
             <div className="user-avatar">
               {(user?.username?.[0] || user?.email?.[0] || "U").toUpperCase()}
@@ -116,6 +63,7 @@ export function MainLayout() {
           </button>
         </header>
 
+        {/* Контент активной страницы */}
         <main className="main-content">
           <Outlet />
         </main>
@@ -123,3 +71,5 @@ export function MainLayout() {
     </div>
   );
 }
+
+export default MainLayout;

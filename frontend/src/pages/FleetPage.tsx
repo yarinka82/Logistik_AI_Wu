@@ -14,12 +14,18 @@ import {
   requestJoinCompanyRequest,
   cancelJoinRequestRequest,
   leaveCompanyRequest,
-  createVehicleRequest
+  createVehicleRequest,
 } from "../api/fleet";
 
 import { toast } from "../components/Notifier";
-import {type CarrierCompany, type CreateVehiclePayload, Role, type StaffDriver, type Vehicle} from "../types";
-
+import {
+  type CarrierCompany,
+  type CreateVehiclePayload,
+  Role,
+  type StaffDriver,
+  type Vehicle,
+} from "../types";
+import {formatDate} from "../utils/formatters.ts";
 
 type Tab = "drivers" | "vehicles" | "employment";
 type DriverFilter = "all" | "pending" | "confirmed";
@@ -35,6 +41,7 @@ const emptyVehicleForm: CreateVehiclePayload = {
   fuel_type: "diesel",
   euro_emission_class: "Euro_6",
 };
+
 
 function getExpiryStatus(dateStr: string | null): "expired" | "soon" | "ok" {
   if (!dateStr) return "ok";
@@ -97,8 +104,6 @@ export function FleetPage() {
   const [driverToDismiss, setDriverToDismiss] = useState<StaffDriver | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
-
-// Вычисляем фактический активный таб на каждом рендере — без setState, без эффекта
   const effectiveTab: Tab =
     tab && visibleTabs.includes(tab) ? tab : visibleTabs[0] ?? "vehicles";
 
@@ -106,7 +111,9 @@ export function FleetPage() {
     const q = companySearch.trim().toLowerCase();
     const base = q
       ? companies.filter(
-          (c) => c.company_name.toLowerCase().includes(q) || (c.base_city || "").toLowerCase().includes(q)
+          (c) =>
+            c.company_name.toLowerCase().includes(q) ||
+            (c.base_city || "").toLowerCase().includes(q)
         )
       : companies;
 
@@ -120,7 +127,9 @@ export function FleetPage() {
 
   const toggleCompanySort = (field: "company_name" | "base_city") => {
     setCompanySort((prev) =>
-      prev.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: "asc" }
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "asc" }
     );
   };
 
@@ -138,7 +147,6 @@ export function FleetPage() {
     [api, driverFilter, isCarrierCompany]
   );
 
-  // Независимый от текущего фильтра счётчик заявок в ожидании — всегда точный
   const loadPendingCount = useCallback(
     async (signal?: AbortSignal) => {
       if (!isCarrierCompany) return;
@@ -152,14 +160,15 @@ export function FleetPage() {
     [api, isCarrierCompany]
   );
 
-  const updateVehicleForm = <K extends keyof CreateVehiclePayload>(key: K, value: CreateVehiclePayload[K]) =>
-    setVehicleForm((prev) => ({ ...prev, [key]: value }));
-
+  const updateVehicleForm = <K extends keyof CreateVehiclePayload>(
+    key: K,
+    value: CreateVehiclePayload[K]
+  ) => setVehicleForm((prev) => ({ ...prev, [key]: value }));
 
   const loadVehicles = useCallback(
     async (signal?: AbortSignal) => {
       try {
-        const { data } = await fetchVehiclesRequest(api, signal); // ← поправлено
+        const { data } = await fetchVehiclesRequest(api, signal);
         setVehicles(data);
       } catch (err) {
         console.error("Failed to load vehicles:", err);
@@ -260,7 +269,7 @@ export function FleetPage() {
     try {
       await requestJoinCompanyRequest(api, companyId);
       toast.success(t("fleet.joinRequested", "Заявку подано"));
-      window.location.reload(); // простой способ перечитати /me/ з новим employer
+      window.location.reload();
     } catch {
       toast.error(t("fleet.actionError", "Не вдалося подати заявку"));
     }
@@ -294,33 +303,56 @@ export function FleetPage() {
 
       <div className="fleet-tabs">
         {visibleTabs.includes("drivers") && (
-          <div className={`fleet-tab ${effectiveTab === "drivers" ? "active" : ""}`} onClick={() => setTab("drivers")}>
-            {t("fleet.tabDrivers", "Водії")}
+          <div
+            className={`fleet-tab ${effectiveTab === "drivers" ? "active" : ""}`}
+            onClick={() => setTab("drivers")}
+          >
+            {t("fleet.tabDrivers", "Водії")} ({drivers.length})
             {pendingCount > 0 && <span className="tab-badge">{pendingCount}</span>}
           </div>
         )}
+
         {visibleTabs.includes("vehicles") && (
-          <div className={`fleet-tab ${effectiveTab === "vehicles" ? "active" : ""}`} onClick={() => setTab("vehicles")}>
+          <div
+            className={`fleet-tab ${effectiveTab === "vehicles" ? "active" : ""}`}
+            onClick={() => setTab("vehicles")}
+          >
             {t("fleet.tabVehicles", "Транспорт")} ({vehicles.length})
           </div>
         )}
+
         {visibleTabs.includes("employment") && (
-          <div className={`fleet-tab ${effectiveTab === "employment" ? "active" : ""}`} onClick={() => setTab("employment")}>
+          <div
+            className={`fleet-tab ${effectiveTab === "employment" ? "active" : ""}`}
+            onClick={() => setTab("employment")}
+          >
             {t("fleet.tabEmployment", "Моя зайнятість")}
           </div>
         )}
       </div>
 
-      {tab === "drivers" && isCarrierCompany && (
+      {effectiveTab === "drivers" && isCarrierCompany && (
         <div className="fleet-content">
           <div className="filter-chips" style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            <button type="button" className={`filter-btn ${driverFilter === "all" ? "active" : ""}`} onClick={() => setDriverFilter("all")}>
+            <button
+              type="button"
+              className={`filter-btn ${driverFilter === "all" ? "active" : ""}`}
+              onClick={() => setDriverFilter("all")}
+            >
               {t("fleet.allDrivers", "Всі")}
             </button>
-            <button type="button" className={`filter-btn ${driverFilter === "pending" ? "active" : ""}`} onClick={() => setDriverFilter("pending")}>
+            <button
+              type="button"
+              className={`filter-btn ${driverFilter === "pending" ? "active" : ""}`}
+              onClick={() => setDriverFilter("pending")}
+            >
               {t("fleet.pendingDrivers", "Заявки")} {pendingCount > 0 && `(${pendingCount})`}
             </button>
-            <button type="button" className={`filter-btn ${driverFilter === "confirmed" ? "active" : ""}`} onClick={() => setDriverFilter("confirmed")}>
+            <button
+              type="button"
+              className={`filter-btn ${driverFilter === "confirmed" ? "active" : ""}`}
+              onClick={() => setDriverFilter("confirmed")}
+            >
               {t("fleet.confirmedDrivers", "У штаті")}
             </button>
           </div>
@@ -356,11 +388,30 @@ export function FleetPage() {
                     <td>
                       {d.license_photo ? (
                         d.license_photo.toLowerCase().endsWith(".pdf") ? (
-                          <div className="pdf-thumb" onClick={(e) => { e.stopPropagation(); setPreviewPhoto(d.license_photo); }} title={t("fleet.viewPdf", "Переглянути PDF")}>📄</div>
+                          <div
+                            className="pdf-thumb"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewPhoto(d.license_photo);
+                            }}
+                            title={t("fleet.viewPdf", "Переглянути PDF")}
+                          >
+                            📄
+                          </div>
                         ) : (
-                          <img src={d.license_photo} alt="" className="license-thumb" onClick={(e) => { e.stopPropagation(); setPreviewPhoto(d.license_photo); }} />
+                          <img
+                            src={d.license_photo}
+                            alt=""
+                            className="license-thumb"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewPhoto(d.license_photo);
+                            }}
+                          />
                         )
-                      ) : "—"}
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td>
                       {d.is_confirmed_by_employer ? (
@@ -372,11 +423,38 @@ export function FleetPage() {
                     <td className="row-actions" style={{ textAlign: "right" }}>
                       {!d.is_confirmed_by_employer ? (
                         <>
-                          <button className="btn-action-approve" onClick={(e) => { e.stopPropagation(); handleApprove(d); }} title={t("fleet.approve", "Прийняти")}>✅</button>
-                          <button className="btn-action-reject" onClick={(e) => { e.stopPropagation(); handleReject(d); }} title={t("fleet.reject", "Відхилити")}>❌</button>
+                          <button
+                            className="btn-action-approve"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprove(d);
+                            }}
+                            title={t("fleet.approve", "Прийняти")}
+                          >
+                            ✅
+                          </button>
+                          <button
+                            className="btn-action-reject"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReject(d);
+                            }}
+                            title={t("fleet.reject", "Відхилити")}
+                          >
+                            ❌
+                          </button>
                         </>
                       ) : (
-                        <button className="btn-action-dismiss" onClick={(e) => { e.stopPropagation(); setDriverToDismiss(d); }} title={t("fleet.dismissDriver", "Відкріпити")}>🗑️</button>
+                        <button
+                          className="btn-action-dismiss"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDriverToDismiss(d);
+                          }}
+                          title={t("fleet.dismissDriver", "Відкріпити")}
+                        >
+                          🗑️
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -387,10 +465,15 @@ export function FleetPage() {
         </div>
       )}
 
-      {tab === "vehicles" && (
+      {effectiveTab === "vehicles" && (
         <div className="fleet-content">
           {canManageVehicles && (
-            <button type="button" className="btn-primary" onClick={() => setShowAddVehicle(true)} style={{ marginBottom: "16px" }}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setShowAddVehicle(true)}
+              style={{ marginBottom: "16px" }}
+            >
               {t("fleet.addVehicle", "Додати авто")}
             </button>
           )}
@@ -421,11 +504,11 @@ export function FleetPage() {
                     <td>{v.brand} {v.model}</td>
                     {isCarrierCompany && <td>{v.assigned_driver_name ?? "—"}</td>}
                     <td>
-                      {v.insurance_expiry ?? "—"}
+                      {formatDate(v.insurance_expiry)}
                       <ExpiryBadge dateStr={v.insurance_expiry} />
                     </td>
                     <td>
-                      {v.tech_inspection_expiry ?? "—"}
+                      {formatDate(v.tech_inspection_expiry)}
                       <ExpiryBadge dateStr={v.tech_inspection_expiry} />
                     </td>
                   </tr>
@@ -436,7 +519,7 @@ export function FleetPage() {
         </div>
       )}
 
-      {tab === "employment" && isDriver && (
+      {effectiveTab === "employment" && isDriver && (
         <div className="fleet-content">
           {employer ? (
             <div className="employment-card">
@@ -471,7 +554,6 @@ export function FleetPage() {
                 </button>
               )}
             </>
-
           )}
         </div>
       )}
@@ -483,44 +565,74 @@ export function FleetPage() {
 
             <div className="field">
               <label>{t("fleet.vehiclePlate", "Номерний знак")} *</label>
-              <input type="text" value={vehicleForm.plate_number}
-                onChange={(e) => updateVehicleForm("plate_number", e.target.value)} required />
+              <input
+                type="text"
+                value={vehicleForm.plate_number}
+                onChange={(e) => updateVehicleForm("plate_number", e.target.value)}
+                required
+              />
             </div>
             <div className="field">
               <label>{t("fleet.vehicleBrand", "Марка")}</label>
-              <input type="text" value={vehicleForm.brand}
-                onChange={(e) => updateVehicleForm("brand", e.target.value)} />
+              <input
+                type="text"
+                value={vehicleForm.brand}
+                onChange={(e) => updateVehicleForm("brand", e.target.value)}
+              />
             </div>
             <div className="field">
               <label>{t("fleet.vehicleModelLabel", "Модель")}</label>
-              <input type="text" value={vehicleForm.model}
-                onChange={(e) => updateVehicleForm("model", e.target.value)} />
+              <input
+                type="text"
+                value={vehicleForm.model}
+                onChange={(e) => updateVehicleForm("model", e.target.value)}
+              />
             </div>
             <div className="field">
               <label>{t("fleet.vehicleType", "Тип ТЗ")}</label>
-              <input type="text" value={vehicleForm.vehicle_type}
+              <input
+                type="text"
+                value={vehicleForm.vehicle_type}
                 placeholder={t("fleet.vehicleTypePlaceholder", "напр. тягач, фургон")}
-                onChange={(e) => updateVehicleForm("vehicle_type", e.target.value)} />
+                onChange={(e) => updateVehicleForm("vehicle_type", e.target.value)}
+              />
             </div>
             <div className="field">
               <label>{t("fleet.gvw", "Повна маса (кг)")} *</label>
-              <input type="number" min={1} value={vehicleForm.gross_vehicle_weight_kg || ""}
-                onChange={(e) => updateVehicleForm("gross_vehicle_weight_kg", Number(e.target.value))} required />
+              <input
+                type="number"
+                min={1}
+                value={vehicleForm.gross_vehicle_weight_kg || ""}
+                onChange={(e) => updateVehicleForm("gross_vehicle_weight_kg", Number(e.target.value))}
+                required
+              />
             </div>
             <div className="field">
               <label>{t("fleet.payload", "Вантажопідйомність (кг)")} *</label>
-              <input type="number" min={0.01} step="0.01" value={vehicleForm.payload_capacity_kg || ""}
-                onChange={(e) => updateVehicleForm("payload_capacity_kg", Number(e.target.value))} required />
+              <input
+                type="number"
+                min={0.01}
+                step="0.01"
+                value={vehicleForm.payload_capacity_kg || ""}
+                onChange={(e) => updateVehicleForm("payload_capacity_kg", Number(e.target.value))}
+                required
+              />
             </div>
             <div className="field">
               <label>{t("fleet.palletCapacity", "Кількість палет")}</label>
-              <input type="number" min={0} value={vehicleForm.pallet_capacity}
-                onChange={(e) => updateVehicleForm("pallet_capacity", Number(e.target.value))} />
+              <input
+                type="number"
+                min={0}
+                value={vehicleForm.pallet_capacity}
+                onChange={(e) => updateVehicleForm("pallet_capacity", Number(e.target.value))}
+              />
             </div>
             <div className="field">
               <label>{t("fleet.fuelType", "Тип пального")}</label>
-              <select value={vehicleForm.fuel_type}
-                onChange={(e) => updateVehicleForm("fuel_type", e.target.value as CreateVehiclePayload["fuel_type"])}>
+              <select
+                value={vehicleForm.fuel_type}
+                onChange={(e) => updateVehicleForm("fuel_type", e.target.value as CreateVehiclePayload["fuel_type"])}
+              >
                 <option value="diesel">{t("fleet.fuel.diesel", "Дизель")}</option>
                 <option value="petrol">{t("fleet.fuel.petrol", "Бензин")}</option>
                 <option value="electric">{t("fleet.fuel.electric", "Електро")}</option>
@@ -530,13 +642,20 @@ export function FleetPage() {
             </div>
             <div className="field">
               <label>{t("fleet.emissionClass", "Клас Euro")}</label>
-              <input type="text" value={vehicleForm.euro_emission_class}
-                onChange={(e) => updateVehicleForm("euro_emission_class", e.target.value)} />
+              <input
+                type="text"
+                value={vehicleForm.euro_emission_class}
+                onChange={(e) => updateVehicleForm("euro_emission_class", e.target.value)}
+              />
             </div>
 
             <div className="confirm-modal-actions">
-              <button className="btn-secondary" onClick={() => setShowAddVehicle(false)}>{t("common.cancel", "Скасувати")}</button>
-              <button className="btn-primary" onClick={handleAddVehicle}>{t("fleet.addVehicle", "Додати авто")}</button>
+              <button className="btn-secondary" onClick={() => setShowAddVehicle(false)}>
+                {t("common.cancel", "Скасувати")}
+              </button>
+              <button className="btn-primary" onClick={handleAddVehicle}>
+                {t("fleet.addVehicle", "Додати авто")}
+              </button>
             </div>
           </div>
         </div>
@@ -548,14 +667,18 @@ export function FleetPage() {
             <p>{t("fleet.confirmDismiss", "Ви впевнені, що хочете відкріпити водія від компанії?")}</p>
             <p className="confirm-modal-name"><strong>{driverToDismiss.full_name}</strong></p>
             <div className="confirm-modal-actions">
-              <button className="btn-secondary" onClick={() => setDriverToDismiss(null)}>{t("common.cancel", "Скасувати")}</button>
-              <button className="btn-danger" onClick={handleDismiss}>{t("fleet.dismiss", "Відкріпити")}</button>
+              <button className="btn-secondary" onClick={() => setDriverToDismiss(null)}>
+                {t("common.cancel", "Скасувати")}
+              </button>
+              <button className="btn-danger" onClick={handleDismiss}>
+                {t("fleet.dismiss", "Відкріпити")}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-        {showCompanyPicker && (
+      {showCompanyPicker && (
         <div className="confirm-modal-backdrop" onClick={() => setShowCompanyPicker(false)}>
           <div className="confirm-modal company-picker-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{t("fleet.chooseCompanyTitle", "Оберіть компанію")}</h3>
@@ -622,7 +745,12 @@ export function FleetPage() {
       {previewPhoto && (
         <div className="photo-modal" onClick={() => setPreviewPhoto(null)}>
           {previewPhoto.toLowerCase().endsWith(".pdf") ? (
-            <iframe src={previewPhoto} title="license-pdf" className="pdf-modal-frame" onClick={(e) => e.stopPropagation()} />
+            <iframe
+              src={previewPhoto}
+              title="license-pdf"
+              className="pdf-modal-frame"
+              onClick={(e) => e.stopPropagation()}
+            />
           ) : (
             <img src={previewPhoto} alt="" onClick={(e) => e.stopPropagation()} />
           )}

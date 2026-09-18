@@ -102,7 +102,8 @@
     "sending": "Senden..."
   },
   "fleet": {
-        "accountActive": "Konto aktiv",
+    "accountActive": "Konto aktiv",
+    "addVehicle": "Fahrzeug hinzufügen",
     "accountSection": "Benutzerkonto",
     "actionError": "Aktion fehlgeschlagen",
     "adrExpiry": "ADR gültig bis",
@@ -205,9 +206,9 @@
     "driverIdNotFound": "Fahrerprofil nicht gefunden"
   },
   "nav": {
-    "loading": "Laden...",
     "dashboard": "Dashboard",
     "fleet": "Mein Fuhrpark",
+    "profile": "Mein Profil",
     "accountant": "Buchhaltung"
   }
 

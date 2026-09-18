@@ -104,10 +104,11 @@
     "sending": "Надсилання..."
   },
   "fleet": {
-        "accountActive": "Акаунт активний",
+    "accountActive": "Акаунт активний",
     "accountSection": "Обліковий запис",
     "actionError": "Не вдалося виконати дію",
     "adrExpiry": "ADR дійсний до",
+    "addVehicle": "Додати транспорт",
     "approve": "Прийняти",
     "backToFleet": "До списку водіїв",
     "baseCity": "Місто базування",
@@ -209,6 +210,7 @@
   "nav": {
     "dashboard": "Дашборд",
     "fleet": "Мій автопарк",
+    "profile": "Мій профіль",
     "accountant": "Бухгалтерія"
   }
 
