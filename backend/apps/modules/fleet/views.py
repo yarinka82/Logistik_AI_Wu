@@ -1,22 +1,45 @@
+# ─────────────────────────────────────────────────────────────
+# Django / Utils
+# ─────────────────────────────────────────────────────────────
 from django.utils import timezone
 
-from rest_framework.decorators import action
+# ─────────────────────────────────────────────────────────────
+# DRF
+# ─────────────────────────────────────────────────────────────
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+# ─────────────────────────────────────────────────────────────
+# Models
+# ─────────────────────────────────────────────────────────────
 from users.models import DriverProfile, CarrierCompanyProfile
-from users.permissions import IsOwnDriverProfile, IsCarrierCompany
 from .models import Vehicle
-from .serializers import VehicleSerializer, StaffDriverListSerializer, CarrierCompanyListSerializer, \
-    DriverProfileSerializer, StaffDriverDetailSerializer
+
+# ─────────────────────────────────────────────────────────────
+# Access rights
+# ─────────────────────────────────────────────────────────────
+from users.permissions import IsOwnDriverProfile, IsCarrierCompany
+
+# ─────────────────────────────────────────────────────────────
+# Serializers
+# ─────────────────────────────────────────────────────────────
+from .serializers import (
+    VehicleSerializer,
+    StaffDriverListSerializer,
+    CarrierCompanyListSerializer,
+    DriverProfileSerializer,
+    StaffDriverDetailSerializer,
+)
+
 
 
 class StaffDriverViewSet(viewsets.ModelViewSet):
-    """Панель владельца компании для управления водителями."""
+    """Company Owner Dashboard to manage drivers."""
 
     serializer_class = StaffDriverListSerializer
     permission_classes = [IsAuthenticated, IsCarrierCompany]
@@ -69,7 +92,7 @@ class StaffDriverViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def dismiss(self, request, pk=None):
         driver = self.get_object()
-        # Снимаем водителя с закрепленного за ним транспорта компании
+        # We remove the driver from the company's transport assigned to him
         Vehicle.objects.filter(assigned_driver=driver).update(
             assigned_driver=None
         )
@@ -98,7 +121,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
         carrier = getattr(self.request.user, "carrier_company_profile", None)
         if not carrier:
             return Vehicle.objects.none()
-        # carrier у Vehicle — это FK на User, а не на CarrierCompanyProfile
+        # carrier in Vehicle is FK on User, not on CarrierCompanyProfile
         return Vehicle.objects.filter(carrier=self.request.user).select_related("assigned_driver")
 
     def perform_create(self, serializer):
@@ -107,13 +130,13 @@ class VehicleViewSet(viewsets.ModelViewSet):
 
 
 class DriverProfileViewSet(viewsets.GenericViewSet):
-    """Действия текущего авторизованного водителя со своим профилем."""
+    """Actions of the current authorized driver with their profile."""
 
     serializer_class = DriverProfileSerializer
     permission_classes = [IsAuthenticated]
 
     def _get_driver_profile(self, user):
-        # Получаем или создаем профиль водителя, если его вдруг нет
+        # Getting or creating a driver profile if you don't have one
         profile, _ = DriverProfile.objects.get_or_create(user=user)
         return profile
 
@@ -183,7 +206,7 @@ class DriverProfileViewSet(viewsets.GenericViewSet):
 
 
 class CarrierCompanyListViewSet(viewsets.ReadOnlyModelViewSet):
-    """Список компаний для поиска и подачи заявки водителем."""
+    """List of companies to search and apply for as a driver."""
 
     serializer_class = CarrierCompanyListSerializer
     permission_classes = [IsAuthenticated]
@@ -194,7 +217,7 @@ class CarrierCompanyListViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ConfirmStaffDriverView(APIView):
-    """PATCH /fleet/staff-drivers/{id}/confirm/ — руководитель подтверждает водителя."""
+    """PATCH /fleet/staff-drivers/{id}/confirm/ — the head confirms the driver."""
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, pk):

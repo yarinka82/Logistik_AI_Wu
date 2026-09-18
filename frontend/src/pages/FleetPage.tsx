@@ -370,7 +370,9 @@ export function FleetPage() {
                   <th>{t("fleet.licenseNumber", "Номер посвідчення")}</th>
                   <th>{t("fleet.photoColumn", "Документ")}</th>
                   <th>{t("fleet.driverStatus", "Статус")}</th>
-                  <th style={{ textAlign: "right" }}>{t("fleet.actions", "Дії")}</th>
+                  <th style={{ textAlign: "right", width: "96px", whiteSpace: "nowrap" }}>
+                    {t("fleet.actions", "Дії")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -420,43 +422,18 @@ export function FleetPage() {
                         <span className="badge-warning">{t("fleet.statusPending", "Очікує підтвердження")}</span>
                       )}
                     </td>
-                    <td className="row-actions" style={{ textAlign: "right" }}>
-                      {!d.is_confirmed_by_employer ? (
-                        <>
-                          <button
-                            className="btn-action-approve"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApprove(d);
-                            }}
-                            title={t("fleet.approve", "Прийняти")}
-                          >
-                            ✅
-                          </button>
-                          <button
-                            className="btn-action-reject"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReject(d);
-                            }}
-                            title={t("fleet.reject", "Відхилити")}
-                          >
-                            ❌
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          className="btn-action-dismiss"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDriverToDismiss(d);
-                          }}
-                          title={t("fleet.dismissDriver", "Відкріпити")}
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </td>
+                      <td style={{ width: "96px", whiteSpace: "nowrap" }}>
+                        <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                          {!d.is_confirmed_by_employer ? (
+                            <>
+                              <button className="btn-action-approve" onClick={(e) => { e.stopPropagation(); handleApprove(d); }} title={t("fleet.approve", "Прийняти")}>✅</button>
+                              <button className="btn-action-reject" onClick={(e) => { e.stopPropagation(); handleReject(d); }} title={t("fleet.reject", "Відхилити")}>❌</button>
+                            </>
+                          ) : (
+                            <button className="btn-action-dismiss" onClick={(e) => { e.stopPropagation(); setDriverToDismiss(d); }} title={t("fleet.dismissDriver", "Відкріпити")}>🗑️</button>
+                          )}
+                        </div>
+                      </td>
                   </tr>
                 ))}
               </tbody>

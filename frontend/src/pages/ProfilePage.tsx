@@ -89,9 +89,9 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-container">
-      {/* Левая колонка: Личные данные и Пароль */}
+      {/*Left column: Personal data and Password*/}
       <div className="profile-stack">
-        {/* Карточка 1: Личные данные */}
+        {/*Card 1: Personal details*/}
         <div className="profile-card">
           <h2 className="profile-title">{t("profile.title", "Особисті дані")}</h2>
           <p className="profile-subtitle">
@@ -128,7 +128,7 @@ export const ProfilePage: React.FC = () => {
           </form>
         </div>
 
-        {/* Карточка 2: Безопасность и пароль */}
+        {/*Card 2: Security and Password*/}
         <div className="profile-card">
           <h2 className="profile-title">{t("profile.securityTitle", "Безпека та зміна пароля")}</h2>
           <p className="profile-subtitle">
@@ -220,13 +220,13 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Правая колонка для водителя: Сверху компания, снизу права */}
+      {/*Right column for driver: Top company, bottom right*/}
       {isDriver && (
         <div className="profile-stack">
-          {/* 1. Блок работы в компании (выше прав) */}
+          {/*1. Block of work in the company (above rights)*/}
           <DriverCompanySection />
 
-          {/* 2. Карточка прав водителя */}
+          {/*2. Driver's license card*/}
           <div className="profile-card license-card">
             <h2 className="profile-title">{t("profile.licenseTitle", "Права водія")}</h2>
             <p className="profile-subtitle">

@@ -3,14 +3,13 @@ import { isAxiosError } from "axios";
 import type {TFunction} from "i18next";
 
 /**
- * Извлекает человекочитаемое сообщение об ошибке из ответа axios.
- * Порядок разбора:
- *  1. data — просто строка → она и есть сообщение
- *  2. data.detail — строка (DRF-style единичная ошибка)
- *  3. остальные поля объекта (валидационные ошибки по полям) — склеиваются в одну строку
- *  4. обычный Error (не связанный с axios) — err.message
- *  5. ничего не подошло — fallback
- */
+ * Extracts a human-readable error message from the axios response.
+ * Disassembly procedure:
+ *  1. data — just a string → it is a message
+ *  2. data.detail — string (DRF-style single error)
+ *  3. other fields of the object (validation errors by fields) — are glued in one line
+ *  4. normal Error (not related to axios) — err.message
+ *  5. nothing came up — fallback*/
 export function extractErrorMessage(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response?.data) {
     const data: unknown = err.response.data;

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { fetchVehicleRequest, updateVehicleRequest } from "../api/fleet";
 import { toast } from "../components/Notifier";
+import { DatePicker } from "../components/DatePicker";
 import "./FleetPage.css";
 import type { CreateVehiclePayload, Vehicle } from "../types";
 import { formatDate } from "../utils/formatters";
@@ -34,7 +35,7 @@ type EditForm = CreateVehiclePayload & {
   tech_inspection_expiry: string | null;
 };
 
-// Функция для подготовки даты к формату инпута YYYY-MM-DD
+// Function for preparing the date for the YYYY-MM-DD input format
 function toInputDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   return dateStr.split("T")[0];
@@ -260,37 +261,21 @@ function VehicleDetailPageInner({ id }: { id?: string }) {
               />
             </div>
 
-            {/* Поле страховки с показом выбранной европейской даты */}
+            {/*Insurance field showing the selected European date*/}
             <div className="field">
-              <label>
-                {t("fleet.vehicleInsurance", "Страховка")}
-                {form.insurance_expiry && (
-                  <span style={{ marginLeft: "8px", fontWeight: "normal", color: "var(--ink-soft)" }}>
-                    ({formatDate(form.insurance_expiry)})
-                  </span>
-                )}
-              </label>
-              <input
-                type="date"
-                value={toInputDate(form.insurance_expiry)}
-                onChange={(e) => updateForm("insurance_expiry", e.target.value || null)}
+              <label>{t("fleet.vehicleInsurance", "Страховка")}</label>
+              <DatePicker
+                value={form.insurance_expiry}
+                onChange={(v) => updateForm("insurance_expiry", v)}
               />
             </div>
 
-            {/* Поле техосмотра с показом выбранной европейской даты */}
+            {/*Inspection field showing the selected European date*/}
             <div className="field">
-              <label>
-                {t("fleet.vehicleInspection", "Техогляд")}
-                {form.tech_inspection_expiry && (
-                  <span style={{ marginLeft: "8px", fontWeight: "normal", color: "var(--ink-soft)" }}>
-                    ({formatDate(form.tech_inspection_expiry)})
-                  </span>
-                )}
-              </label>
-              <input
-                type="date"
-                value={toInputDate(form.tech_inspection_expiry)}
-                onChange={(e) => updateForm("tech_inspection_expiry", e.target.value || null)}
+              <label>{t("fleet.vehicleInspection", "Техогляд")}</label>
+              <DatePicker
+                value={form.tech_inspection_expiry}
+                onChange={(v) => updateForm("tech_inspection_expiry", v)}
               />
             </div>
 

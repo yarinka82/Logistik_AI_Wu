@@ -27,7 +27,7 @@ def validate_license_photo(file) -> None:
 
 
 def compress_license_photo(file):
-    """Повертає ContentFile: PDF без змін, зображення — стиснуті/зменшені."""
+    """Returns ContentFile: PDF unchanged, images compressed/reduced."""
     ext = file.name.rsplit(".", 1)[-1].lower()
     if ext == "pdf":
         return file

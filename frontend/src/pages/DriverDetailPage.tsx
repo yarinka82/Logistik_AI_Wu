@@ -20,10 +20,9 @@ const LICENSE_CATEGORIES = ["B", "BE", "C1", "C1E", "C", "CE", "D1", "D1E", "D",
 const CODE_95_CATEGORIES = ["C", "D"];
 
 /**
- * driving_license_categories / code_95_categories на бекенді — CharField
- * ("C,CE"), не масив. Тримаємо в UI масив, а на сервер завжди йде рядок
- * (або null, якщо категорій немає).
- */
+ * driving_license_categories / code_95_categories on the backend — CharField
+ * ("C,CE"), not array. We keep an array in the UI, and a line always goes to the server
+ * (or null if there are no categories).*/
 type Categories = string | null;
 
 const toList = (v: Categories): string[] =>
@@ -123,12 +122,12 @@ export function DriverDetailPage() {
     useEffect(() => {
       if (!validId) return;
       const controller = new AbortController();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- стандартний fetch-in-effect з AbortController, setState виконується лише після await
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- standard fetch-in-effect with AbortController, setState runs only after await
       load(controller.signal);
       return () => controller.abort();
     }, [validId, load]);
 
-  // Поточне значення поля: із форми, якщо його вже редагували, інакше з сервера.
+  // Current value of the field: from the form, if it has already been edited, otherwise from the server.
   const field = <K extends keyof UpdateDriverPayload>(key: K) =>
     (key in form ? form[key] : (driver?.[key as keyof DriverDetail] as UpdateDriverPayload[K]));
 
@@ -235,7 +234,7 @@ export function DriverDetailPage() {
       <h1>{driver.full_name}</h1>
 
       <div className="fleet-content">
-        {/* Дані, які веде компанія */}
+        {/*Data maintained by the company*/}
         <div className="field">
           <label>{t("fleet.driverName", "ПІБ")} *</label>
           <input
@@ -373,7 +372,7 @@ export function DriverDetailPage() {
         )}
       </div>
 
-      {/* Дані з профілю користувача — тільки читання */}
+      {/*User Profile Data — Read Only*/}
       <div className="fleet-content">
         <h3>{t("fleet.accountSection", "Обліковий запис")}</h3>
         <table className="fleet-table">

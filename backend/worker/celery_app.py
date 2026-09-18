@@ -5,10 +5,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
 app = Celery("logistik")
 
-# Берём настройки CELERY_* из Django settings.py (CELERY_BROKER_URL и т.д.)
+# Take CELERY_* settings from Django settings.py (CELERY_BROKER_URL, etc.)
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Автоматически находит tasks.py во всех INSTALLED_APPS + в самом worker/
+# Automatically finds tasks.py in all INSTALLED_APPS + in the worker/
 app.autodiscover_tasks(packages=["worker"])
 
 

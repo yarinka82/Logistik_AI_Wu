@@ -1,8 +1,6 @@
 
-// src/types/fleet.ts
-
 // ==========================================
-// 1. ТИПЫ ДЛЯ ТОПЛИВА И ТРАНСПОРТА
+// 1. TYPES FOR FUEL AND TRANSPORT
 // ==========================================
 export type FuelType = "diesel" | "petrol" | "electric" | "hybrid" | "lpg";
 
@@ -41,13 +39,13 @@ export interface CreateVehiclePayload {
   tech_inspection_expiry?: string | null;
 }
 
-// Алиас для обратной совместимости
+// Backward compatibility alias
 export type NewVehiclePayload = Partial<CreateVehiclePayload> & {
   plate_number: string;
 };
 
 // ==========================================
-// 2. ВОДИТЕЛИ (СПИСОК И ДЕТАЛИ)
+// 2. DRIVERS (LIST AND DETAILS)
 // ==========================================
 export interface StaffDriver {
   id: number;
@@ -89,7 +87,7 @@ export type DriverDetail = {
   adr_expiring_soon: boolean;
 };
 
-/** Поля, разрешённые для редактирования компании */
+/** Fields allowed for company editing*/
 export type UpdateDriverPayload = Partial<
   Pick<
     DriverDetail,
@@ -107,7 +105,7 @@ export type UpdateDriverPayload = Partial<
 >;
 
 // ==========================================
-// 3. КОМПАНИИ-ПЕРЕВОЗЧИКИ
+// 3. shipping companies
 // ==========================================
 export interface CarrierCompany {
   id: number;

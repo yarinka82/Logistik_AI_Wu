@@ -119,7 +119,7 @@
     "dismissDriver": "Vom Unternehmen entfernen",
     "driverApproved": "Fahrer erfolgreich bestätigt",
     "driverDismissed": "Fahrer vom Unternehmen entfernt",
-    "driverEmail": "E-Mail",
+    "driverEmail": "E-Mail / Telefon",
     "driverLoadError": "Fahrerdaten konnten nicht geladen werden",
     "driverName": "Name",
     "driverNotFound": "Fahrer nicht gefunden",
@@ -208,8 +208,40 @@
   "nav": {
     "dashboard": "Dashboard",
     "fleet": "Mein Fuhrpark",
-    "profile": "Mein Profil",
-    "accountant": "Buchhaltung"
+    "accountant": "Buchhaltung",
+    "adminUsers": "Benutzer",
+    "profile": "Mein Profil"
+  },
+  "datePicker": {
+    "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+    "placeholder": "TT.MM.JJJJ",
+    "prevMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "clear": "Löschen"
+  },
+  "admin": {
+    "usersTitle": "Systembenutzer",
+    "allRoles": "Alle Rollen",
+    "statusAll": "Alle",
+    "statusActive": "Aktiv",
+    "statusBlocked": "Gesperrt",
+    "search": "Nach E-Mail, Telefon suchen...",
+    "noUsers": "Keine Benutzer gefunden",
+    "name": "Name",
+    "email": "E-Mail / Telefon",
+    "role": "Rolle",
+    "status": "Status",
+    "actions": "Aktionen",
+    "active": "Aktiv",
+    "blocked": "Gesperrt",
+    "block": "Sperren",
+    "unblock": "Entsperren",
+    "confirmBlock": "Möchten Sie diesen Benutzer wirklich sperren?",
+    "confirmUnblock": "Möchten Sie diesen Benutzer wirklich entsperren?",
+    "userBlocked": "Benutzer erfolgreich gesperrt",
+    "userUnblocked": "Benutzer erfolgreich entsperrt",
+    "actionError": "Aktion fehlgeschlagen"
   }
+
 
 }

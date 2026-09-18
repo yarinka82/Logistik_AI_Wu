@@ -15,6 +15,7 @@ import Notifier from "./components/Notifier";
 import {VehicleDetailPage} from "./pages/VehicleDetailPage.tsx";
 import {Role} from "./types";
 import {DriverDetailPage} from "./pages/DriverDetailPage.tsx";
+import {AdminUsersPage} from "./pages/AdminUsersPage.tsx";
 
 
 
@@ -45,6 +46,14 @@ export default function App() {
             <Route path="/fleet/vehicles/:id" element={<VehicleDetailPage />} />
             <Route path="/fleet/drivers/:id" element={<DriverDetailPage />} />
             {/*Access only for accountant and admin*/}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={[Role.Admin]}>
+                  <AdminUsersPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/accountant"
               element={

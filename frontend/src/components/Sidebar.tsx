@@ -5,7 +5,6 @@ import { useAuth } from "../auth/AuthContext";
 import { Role } from "../types";
 import {ThemeToggle} from "../theme/ThemeToggle.tsx";
 
-
 interface NavItem {
   to: string;
   label: string;
@@ -31,6 +30,13 @@ const NAV_ITEMS: NavItem[] = [
     roles: [Role.Accountant, Role.Admin],
   },
   {
+    to: "/admin/users",
+    label: "adminUsers",
+    fallback: "Користувачі",
+    end: false,
+    roles: [Role.Admin],
+  },
+  {
     to: "/profile",
     label: "profile",
     fallback: "Профіль",
@@ -44,19 +50,19 @@ export function Sidebar() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Фильтруем пункты меню в зависимости от роли пользователя
+  // Filter the menu items depending on the user's role
   const visibleNav = NAV_ITEMS.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
   );
 
   return (
     <aside className="sidebar">
-      {/* Логотип */}
+      {/*Logo*/}
       <div className="brand" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
         Fracht<span className="brand-dot">.</span>Markt
       </div>
 
-      {/* Навигация */}
+      {/*Navigation*/}
       <nav className="sidebar-nav">
         {visibleNav.map((item) => {
           const navKey = `nav.${item.label}`;
@@ -73,7 +79,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Футер сайдбара с переключателем темы */}
+      {/*Footer Sidebar with Theme Switcher*/}
       <div className="sidebar-footer">
         <ThemeToggle />
       </div>
