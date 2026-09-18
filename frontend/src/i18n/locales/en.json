@@ -118,7 +118,7 @@
     "dismissDriver": "Dismiss from company",
     "driverApproved": "Driver successfully approved",
     "driverDismissed": "Driver dismissed from company",
-    "driverEmail": "Email",
+    "driverEmail": "Email / Phone",
     "driverLoadError": "Failed to load driver details",
     "driverName": "Full name",
     "driverNotFound": "Driver not found",
@@ -206,10 +206,42 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "profile": "My Profile",
     "fleet": "My Fleet",
-    "loading": "Loading...",
-    "accountant": "Accounting"
+    "accountant": "Accounting",
+    "adminUsers": "Users",
+    "profile": "My Profile"
+  },
+  "datePicker": {
+    "weekdays": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    "placeholder": "DD.MM.YYYY",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "clear": "Clear"
+  },
+  "admin": {
+    "usersTitle": "System Users",
+    "allRoles": "All Roles",
+    "statusAll": "All",
+    "statusActive": "Active",
+    "statusBlocked": "Blocked",
+    "search": "Search by email, phone...",
+    "noUsers": "No users found",
+    "name": "Full Name",
+    "email": "Email / Phone",
+    "role": "Role",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "blocked": "Blocked",
+    "block": "Block",
+    "unblock": "Unblock",
+    "confirmBlock": "Are you sure you want to block this user?",
+    "confirmUnblock": "Are you sure you want to unblock this user?",
+    "userBlocked": "User successfully blocked",
+    "userUnblocked": "User successfully unblocked",
+    "actionError": "Action failed"
   }
+
+
 
 }

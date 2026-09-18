@@ -1,16 +1,17 @@
 
 /**
- * Форматирует ISO-дату (YYYY-MM-DD) в европейский стандарт DD.MM.YYYY.
- * Пример: "2026-09-18" -> "18.09.2026"
+ * Formats the ISO date (YYYY-MM-DD) into the European standard DD.MM.YYYY.
+ * Parses the string directly (no Date object) to avoid UTC/local timezone
+ * shifting the day when the browser's timezone is behind UTC.
+ * Example: "2026-09-18" -> "18.09.2026"
  */
 export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
 
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
+  const datePart = dateStr.split("T")[0]; 
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!match) return dateStr;
 
+  const [, year, month, day] = match;
   return `${day}.${month}.${year}`;
 }

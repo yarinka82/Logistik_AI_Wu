@@ -121,7 +121,7 @@
     "dismissDriver": "Відкріпити від компанії",
     "driverApproved": "Водія успішно підтверджено",
     "driverDismissed": "Водія відкріплено від компанії",
-    "driverEmail": "Email",
+    "driverEmail": "Email / Телефон",
     "driverLoadError": "Не вдалося завантажити дані водія",
     "driverName": "ПІБ",
     "driverNotFound": "Водія не знайдено",
@@ -210,8 +210,41 @@
   "nav": {
     "dashboard": "Дашборд",
     "fleet": "Мій автопарк",
-    "profile": "Мій профіль",
-    "accountant": "Бухгалтерія"
+    "accountant": "Бухгалтерія",
+    "adminUsers": "Користувачі",
+    "profile": "Мій профіль"
+  },
+  "datePicker": {
+    "weekdays": ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"],
+    "placeholder": "ДД.ММ.РРРР",
+    "prevMonth": "Попередній місяць",
+    "nextMonth": "Наступний місяць",
+    "clear": "Очистити"
+  },
+  "admin": {
+    "usersTitle": "Користувачі системи",
+    "allRoles": "Усі ролі",
+    "statusAll": "Всі",
+    "statusActive": "Активні",
+    "statusBlocked": "Заблоковані",
+    "search": "Пошук за email, телефоном...",
+    "noUsers": "Користувачів не знайдено",
+    "name": "ПІБ",
+    "email": "Email / Телефон",
+    "role": "Роль",
+    "status": "Статус",
+    "actions": "Дії",
+    "active": "Активний",
+    "blocked": "Заблоковано",
+    "block": "Заблокувати",
+    "unblock": "Розблокувати",
+    "confirmBlock": "Заблокувати користувача?",
+    "confirmUnblock": "Розблокувати користувача?",
+    "userBlocked": "Користувача заблоковано",
+    "userUnblocked": "Користувача розблоковано",
+    "actionError": "Не вдалося виконати дію"
   }
+
+
 
 }

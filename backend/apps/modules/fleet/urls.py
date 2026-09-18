@@ -22,8 +22,7 @@ router.register("vehicles", VehicleViewSet, basename="vehicle")
 urlpatterns = router.urls
 
 
-'''
-/api/fleet/staff-drivers/	GET	fetchDriversRequest	Список водителей компании
+'''/api/fleet/staff-drivers/	GET	fetchDriversRequest	Список водителей компании
 /api/fleet/staff-drivers/{id}/	GET	fetchDriverRequest	Детальная карточка водителя
 /api/fleet/staff-drivers/{id}/	PATCH	updateDriverRequest	Редактирование данных водителя
 /api/fleet/staff-drivers/{id}/approve/	POST	approveDriverRequest	Принять водителя в штат
@@ -37,6 +36,4 @@ urlpatterns = router.urls
 /api/fleet/vehicles/	POST	createVehicleRequest	Добавить автомобиль
 /api/fleet/vehicles/{id}/	GET	fetchVehicleRequest	Детали автомобиля
 /api/fleet/vehicles/{id}/	PATCH	updateVehicleRequest	Обновить автомобиль / назначить водителя
-/api/fleet/vehicles/{id}/	DELETE	deleteVehicleRequest	Удалить автомобиль
-
-'''
+/api/fleet/vehicles/{id}/	DELETE	deleteVehicleRequest	Удалить автомобиль'''

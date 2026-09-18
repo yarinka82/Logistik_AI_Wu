@@ -35,6 +35,8 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend"),
 }
 
 # Application definition
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'storages',
+    'django_filters',
     'users',
     'apps.modules.fleet',
 ]
@@ -99,15 +102,12 @@ TEMPLATES = [
     },
 ]
 
-
-
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get("DATABASE_URL"),
         engine="django.contrib.gis.db.backends.postgis",
     )
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -124,7 +124,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -133,10 +132,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-
 STATIC_URL = 'static/'
-
 
 # ==========================================
 # Email Configuration (SMTP)
@@ -161,7 +157,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", "Fracht.Markt <noreply@fracht-markt.de>"
 )
 
-# S3-совместимое хранилище (MinIO)
+# S3-compatible storage (MinIO)
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")

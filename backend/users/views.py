@@ -1,22 +1,26 @@
 import os
 
-from django.conf import settings
 # ───────────────────────────────────────────────────────────────────────────────
 # Django: Core & Auth
 # ───────────────────────────────────────────────────────────────────────────────
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 # ───────────────────────────────────────────────────────────────────────────────
 # DRF: Core
 # ───────────────────────────────────────────────────────────────────────────────
-from rest_framework import generics, permissions, exceptions, status, parsers, views, response
+from rest_framework import generics, permissions, exceptions, status, parsers, views, response, filters
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,6 +31,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from .permissions import IsAdmin
 # ───────────────────────────────────────────────────────────────────────────────
 # Local Serializers
 # ───────────────────────────────────────────────────────────────────────────────
@@ -35,7 +40,7 @@ from .serializers import (
     UserSerializer,
     ChangePasswordSerializer,
     PasswordResetConfirmSerializer,
-    PasswordResetRequestSerializer,
+    PasswordResetRequestSerializer, UserAdminListSerializer,
 )
 from .utils import validate_license_photo, compress_license_photo
 
@@ -237,3 +242,47 @@ class LicensePhotoUploadView(views.APIView):
         profile.license_photo = processed
         profile.save(update_fields=["license_photo"])
         return response.Response({"license_photo": profile.license_photo.url})
+
+
+
+class UserAdminListView(generics.ListAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = UserAdminListSerializer
+    queryset = User.objects.all().order_by("-date_joined")
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ["role", "is_blocked"]     # ?role=driver&is_blocked=true
+    search_fields = ["email", "username", "phone", "first_name", "last_name"]
+
+
+
+class UserBlockView(APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+
+        if user.pk == request.user.pk:
+            raise PermissionDenied("Не можна заблокувати власний акаунт.")
+
+        if user.role == User.Role.ADMIN:
+            raise PermissionDenied("Блокування адміністраторів заборонено.")
+
+        user.is_blocked = True
+        user.blocked_at = timezone.now()
+        user.save(update_fields=["is_blocked", "blocked_at"])
+        return Response(UserAdminListSerializer(user).data)
+
+
+
+class UserUnblockView(APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        user.is_blocked = False
+        user.blocked_at = None
+        user.save(update_fields=["is_blocked", "blocked_at"])
+        return Response(UserAdminListSerializer(user).data)
+    
+    
+    

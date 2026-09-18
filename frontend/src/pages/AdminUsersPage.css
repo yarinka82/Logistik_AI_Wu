@@ -1,0 +1,61 @@
+
+/* ==========================================================================
+   ADMIN USERS PAGE — layout & filters
+   ========================================================================== */
+.admin-users-page {
+  padding: 32px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+}
+
+.admin-users-page h1 {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.admin-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-filters select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.admin-filters select:focus {
+  outline: none;
+  border-color: var(--accent, #00d2b4);
+}
+
+.admin-filters input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 220px;
+}
+
+.admin-filters input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent, #00d2b4);
+}
+
+/* filter-chips здесь без margin-bottom — он уже задан на .admin-filters */
+.admin-filters .filter-chips {
+  margin-bottom: 0;
+}

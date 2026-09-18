@@ -99,7 +99,7 @@ export function RegisterPage() {
         <h2>{t("auth.registerTitle")}</h2>
         <p className="lede">{t("auth.registerLede")}</p>
 
-        {/* Роли в один горизонтальный ряд */}
+        {/*Roles in one horizontal row*/}
         <div
           className="role-row"
           style={{

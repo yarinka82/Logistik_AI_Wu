@@ -29,7 +29,7 @@ export const ResetPasswordConfirmPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      // Аккуратный вызов готовой функции:
+      // Careful call of the finished function:
       await resetPasswordConfirmRequest({
         uid: uid!,
         token: token!,

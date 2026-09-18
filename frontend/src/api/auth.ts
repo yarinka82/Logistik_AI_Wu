@@ -31,7 +31,7 @@ export function fetchMeRequest(api: AxiosInstance) {
   return api.get<User>("/auth/me/");
 }
 
-// Требуют авторизованного инстанса (api из useAuth), не authClient
+// Require an authorized instance (api from useAuth), not authClient
 export function updateProfileRequest(api: AxiosInstance, payload: { phone: string }) {
   return api.patch<User>("/auth/me/", payload);
 }

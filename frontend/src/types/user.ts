@@ -1,14 +1,28 @@
 
 import { Role } from "./roles";
 
-// --- Данные компании-работодателя ---
+export interface AdminUser {
+  id: number;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  role: Role;
+  is_verified: boolean;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  date_joined: string;
+}
+
+
+
+// --- Employer Company Data ---
 export interface EmployerCompany {
   id: number;
   company_name: string;
   company_registration_number?: string;
 }
 
-// --- Данные профилей по ролям ---
+// --- Profile data by role ---
 export interface DriverProfileData {
   id: number;
   full_name: string;
@@ -34,7 +48,7 @@ export interface ClientIndividualProfileData {
   full_name: string;
 }
 
-// --- Базовый интерфейс пользователя ---
+// --- Basic User Interface ---
 interface BaseUser {
   id: number;
   email: string;
@@ -44,7 +58,7 @@ interface BaseUser {
   license_photo: string | null;
 }
 
-// --- Дискриминантные объединения пользователей ---
+// --- Discriminant user associations ---
 export interface DriverUser extends BaseUser {
   role: typeof Role.Driver;
   profile_data: DriverProfileData;
@@ -70,7 +84,7 @@ export interface StaffUser extends BaseUser {
   profile_data: Record<string, unknown>;
 }
 
-// Главный тип User
+// Main User Type
 export type User =
   | DriverUser
   | CarrierCompanyUser
