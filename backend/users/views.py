@@ -101,6 +101,7 @@ class MeView(generics.RetrieveAPIView):
         context["request"] = self.request
         return context
     
+ 
     
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
@@ -114,6 +115,7 @@ class ChangePasswordView(APIView):
         user.save()
 
         return Response({"detail": "Passwort erfolgreich geändert."}, status=status.HTTP_200_OK)
+
 
 
 class PasswordResetRequestView(APIView):

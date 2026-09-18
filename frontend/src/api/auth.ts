@@ -1,6 +1,7 @@
 import type { AxiosInstance } from "axios";
 import { authClient } from "./client";
-import type { LoginPayload, RegisterPayload, TokenPair, User } from "../auth/types";
+import type {LoginPayload, RegisterPayload, TokenPair, User} from "../types";
+
 
 export function loginRequest(payload: LoginPayload) {
   return authClient.post<TokenPair>("/login/", payload);
@@ -18,8 +19,12 @@ export function forgotPasswordRequest(email: string) {
   return authClient.post("/password-reset/", { email });
 }
 
-export function resetPasswordConfirmRequest(uid: string, token: string, newPassword: string) {
-  return authClient.post("/password-reset/confirm/", { uid, token, new_password: newPassword });
+export function resetPasswordConfirmRequest(payload: {
+  uid: string;
+  token: string;
+  new_password: string;
+}) {
+  return authClient.post("/password-reset-confirm/", payload);
 }
 
 export function fetchMeRequest(api: AxiosInstance) {

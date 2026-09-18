@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import { toast } from "../components/Notifier";
-import type { Role } from "./types";
+import type {Role} from "../types";
 
 interface ProtectedRouteProps {
   children: ReactNode;

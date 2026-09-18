@@ -1,55 +1,131 @@
 
 import type { AxiosInstance } from "axios";
+import type {
+  CarrierCompany,
+  CreateVehiclePayload,
+  DriverDetail,
+  StaffDriver,
+  UpdateDriverPayload,
+  Vehicle,
+} from "../types";
 
-export interface StaffDriver {
-  id: number;
-  full_name: string;
-  driver_license_number: string;
-  license_photo: string | null;
-  email: string;
-  is_active: boolean;
+// ==========================================
+// 1. ВОДІЇ (ПАНЕЛЬ ВЛАСНИКА)
+// ==========================================
+
+export function fetchDriversRequest(
+  api: AxiosInstance,
+  status?: "pending" | "confirmed",
+  signal?: AbortSignal
+) {
+  return api.get<StaffDriver[]>("/fleet/staff-drivers/", {
+    params: status ? { status } : undefined,
+    signal,
+  });
 }
 
-export interface Invite {
-  id: number;
-  code: string;
-  created_at: string;
-  expires_at: string;
-  used_by: number | null;
+export const fetchDriverRequest = (
+  api: AxiosInstance,
+  id: number | string,
+  signal?: AbortSignal
+) => api.get<DriverDetail>(`/fleet/staff-drivers/${id}/`, { signal });
+
+export const updateDriverRequest = (
+  api: AxiosInstance,
+  id: number | string,
+  payload: UpdateDriverPayload
+) => api.patch<DriverDetail>(`/fleet/staff-drivers/${id}/`, payload);
+
+export function approveDriverRequest(api: AxiosInstance, driverId: number | string) {
+  return api.post(`/fleet/staff-drivers/${driverId}/approve/`);
 }
 
-export interface Vehicle {
-  id: number;
-  plate_number: string;
-  brand: string;
-  model: string;
-  assigned_driver_name: string | null;
-  insurance_expiry: string | null;
-  tech_inspection_expiry: string | null;
-  insurance_expiring_soon: boolean;
-  tech_inspection_expiring_soon: boolean;
+export function rejectDriverRequest(api: AxiosInstance, driverId: number | string) {
+  return api.post(`/fleet/staff-drivers/${driverId}/reject/`);
 }
 
-export function fetchDriversRequest(api: AxiosInstance, signal?: AbortSignal) {
-  return api.get<StaffDriver[]>("/fleet/drivers/", { signal });
+export function dismissDriverRequest(api: AxiosInstance, driverId: number | string) {
+  return api.post(`/fleet/staff-drivers/${driverId}/dismiss/`);
 }
 
-export function toggleDriverActiveRequest(api: AxiosInstance, driverId: number, isActive: boolean) {
-  return api.patch(`/fleet/drivers/${driverId}/`, { is_active: isActive });
+// ==========================================
+// 2. ЗАЯВКИ ВОДІЯ (ВЛАСНИЙ ПРОФІЛЬ)
+// ==========================================
+
+export function fetchCarrierCompaniesRequest(
+  api: AxiosInstance,
+  signal?: AbortSignal
+) {
+  return api.get<CarrierCompany[]>("/fleet/carrier-companies/", { signal });
 }
 
-export function removeDriverRequest(api: AxiosInstance, driverId: number) {
-  return api.delete(`/fleet/drivers/${driverId}/`);
+export function requestJoinCompanyRequest(
+  api: AxiosInstance,
+  companyId: number
+) {
+  return api.post("/fleet/driver-profiles/request-join/", {
+    company_id: companyId,
+  });
 }
 
-export function fetchInvitesRequest(api: AxiosInstance, signal?: AbortSignal) {
-  return api.get<Invite[]>("/fleet/invites/", { signal });
+export function cancelJoinRequestRequest(api: AxiosInstance) {
+  return api.post("/fleet/driver-profiles/cancel-request/");
 }
 
-export function generateInviteRequest(api: AxiosInstance) {
-  return api.post("/fleet/invites/", {});
+export function leaveCompanyRequest(api: AxiosInstance) {
+  return api.post("/fleet/driver-profiles/leave-company/");
 }
 
-export function fetchVehiclesRequest(api: AxiosInstance, signal?: AbortSignal) {
+// ==========================================
+// 3. ТРАНСПОРТ
+// ==========================================
+
+export function fetchVehiclesRequest(
+  api: AxiosInstance,
+  signal?: AbortSignal
+) {
   return api.get<Vehicle[]>("/fleet/vehicles/", { signal });
+}
+
+export function fetchVehicleRequest(
+  api: AxiosInstance,
+  id: number | string,
+  signal?: AbortSignal
+) {
+  return api.get<Vehicle>(`/fleet/vehicles/${id}/`, { signal });
+}
+
+export function createVehicleRequest(
+  api: AxiosInstance,
+  payload: CreateVehiclePayload
+) {
+  return api.post<Vehicle>("/fleet/vehicles/", payload);
+}
+
+export function updateVehicleRequest(
+  api: AxiosInstance,
+  id: number | string,
+  payload: Partial<CreateVehiclePayload> & {
+    insurance_expiry?: string | null;
+    tech_inspection_expiry?: string | null;
+  }
+) {
+  return api.patch<Vehicle>(`/fleet/vehicles/${id}/`, payload);
+}
+
+export function deleteVehicleRequest(
+  api: AxiosInstance,
+  id: number | string
+) {
+  return api.delete(`/fleet/vehicles/${id}/`);
+}
+
+export function assignDriverToVehicleRequest(
+  api: AxiosInstance,
+  vehicleId: number | string,
+  driverId: number | null
+) {
+  return api.patch<Vehicle>(`/fleet/vehicles/${vehicleId}/`, {
+    assigned_driver: driverId,
+  });
 }

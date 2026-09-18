@@ -1,16 +1,20 @@
 
-import {useState, type FormEvent, useEffect} from "react";
-import {Link, useNavigate, useSearchParams} from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import { Role, type RegisterPayload } from "../auth/types";
-import { toast } from "../components/Notifier";
-import { AuthLayout } from "./AuthLayout";
-import { extractErrorMessage } from "../api/errors.ts";
-import {API_BASE} from "../api/client.ts";
-import axios from "axios";
 
-const ROLE_ORDER: Role[] = [Role.ClientCompany, Role.ClientIndividual, Role.Driver];
+import { toast } from "../components/Notifier";
+import { extractErrorMessage } from "../api/errors";
+import {type RegisterPayload, Role} from "../types";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
+
+const ROLE_ORDER: Role[] = [
+  Role.ClientCompany,
+  Role.ClientIndividual,
+  Role.Driver,
+  Role.CarrierCompany,
+];
 
 export function RegisterPage() {
   const { t } = useTranslation();
@@ -24,44 +28,14 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const [isCarrierCompany, setIsCarrierCompany] = useState(false);
   const [companyName, setCompanyName] = useState("");
-  const [edrpou, setEdrpou] = useState("");
+  const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [fullName, setFullName] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const [searchParams] = useSearchParams();
-  const inviteCode = searchParams.get("invite");
-
-  const [inviteCompanyName, setInviteCompanyName] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [checkingInvite, setCheckingInvite] = useState(Boolean(inviteCode));
-
-  useEffect(() => {
-    if (!inviteCode) return;
-
-    const controller = new AbortController();
-
-    axios
-      .get(`${API_BASE}/fleet/invites/validate/`, {
-        params: { code: inviteCode },
-        signal: controller.signal,
-      })
-      .then(({ data }) => {
-        setInviteCompanyName(data.company_name);
-        setRole(Role.Driver);
-      })
-      .catch(() => {
-        setInviteError(t("auth.inviteInvalid", "Запрошення недійсне або прострочене"));
-      })
-      .finally(() => setCheckingInvite(false));
-
-    return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inviteCode]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -81,52 +55,78 @@ export function RegisterPage() {
         username,
         password,
         role,
-        ...(role === Role.ClientCompany && { company_name: companyName, edrpou }),
-        ...(role === Role.ClientIndividual && { full_name: fullName }),
-        ...(role === Role.Driver && { full_name: fullName, driver_license_number: licenseNumber }),
-        ...(inviteCode && { invite_code: inviteCode }),
+        ...(role === Role.ClientCompany && {
+          company_name: companyName,
+          company_registration_number: companyRegistrationNumber,
+        }),
+        ...(role === Role.ClientIndividual && {
+          full_name: fullName,
+        }),
+        ...(role === Role.Driver && {
+          full_name: fullName,
+          driver_license_number: licenseNumber,
+        }),
+        ...(role === Role.CarrierCompany && {
+          company_name: companyName,
+          company_registration_number: companyRegistrationNumber,
+          also_drives: isCarrierCompany,
+          ...(isCarrierCompany && { driver_license_number: licenseNumber }),
+        }),
       };
+
       await register(payload);
       toast.success(t("auth.registerSuccess", "Реєстрація успішна!"));
       navigate("/");
-      } catch (err: unknown) {
-        const errMsg = extractErrorMessage(err, t("auth.registerError", "Помилка реєстрації"));
-        setError(errMsg);
-        toast.error(errMsg);
-      }
-
+    } catch (err: unknown) {
+      const errMsg = extractErrorMessage(err, t("auth.registerError", "Помилка реєстрації"));
+      setError(errMsg);
+      toast.error(errMsg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-      <AuthLayout heroTitleKey="auth.registerHeroTitle" heroSubtitleKey="auth.registerHeroSubtitle">
+    <AuthLayout heroTitleKey="auth.registerHeroTitle" heroSubtitleKey="auth.registerHeroSubtitle">
       <div className="tabs">
-        <Link to="/login" className="tab">{t("auth.tabLogin")}</Link>
+        <Link to="/login" className="tab">
+          {t("auth.tabLogin")}
+        </Link>
         <div className="tab active">{t("auth.tabRegister")}</div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        {checkingInvite && <p className="invite-banner checking">{t("auth.checkingInvite", "Перевірка запрошення...")}</p>}
-
-        {inviteCompanyName && (
-          <p className="invite-banner success">
-            {t("auth.registeringForCompany", "Реєстрація водія компанії")} <strong>{inviteCompanyName}</strong>
-          </p>
-        )}
-
-        {inviteError && <p className="invite-banner error">{inviteError}</p>}
-
         <h2>{t("auth.registerTitle")}</h2>
         <p className="lede">{t("auth.registerLede")}</p>
 
-        <div className="role-row">
+        {/* Роли в один горизонтальный ряд */}
+        <div
+          className="role-row"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: "8px",
+            justifyContent: "space-between",
+            marginBottom: "1.25rem",
+            flexWrap: "wrap",
+          }}
+        >
           {ROLE_ORDER.map((r) => (
-            <div
+            <button
+              type="button"
               key={r}
-              className={`role-chip ${role === r ? "selected" : ""} ${inviteCompanyName ? "disabled" : ""}`}
-              onClick={() => !inviteCompanyName && setRole(r)}
+              className={`role-chip ${role === r ? "selected" : ""}`}
+              onClick={() => setRole(r)}
+              style={{
+                flex: "1 1 calc(25% - 8px)",
+                minWidth: "120px",
+                textAlign: "center",
+                padding: "10px 8px",
+                cursor: "pointer",
+              }}
             >
               {t(`auth.roles.${r}`)}
-            </div>
+            </button>
           ))}
         </div>
 
@@ -157,11 +157,21 @@ export function RegisterPage() {
           <>
             <div className="field">
               <label>{t("auth.companyName")}</label>
-              <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required
+              />
             </div>
             <div className="field">
-              <label>{t("auth.edrpou")}</label>
-              <input type="text" value={edrpou} onChange={(e) => setEdrpou(e.target.value)} required />
+              <label>{t("auth.companyRegistrationNumber")}</label>
+              <input
+                type="text"
+                value={companyRegistrationNumber}
+                onChange={(e) => setCompanyRegistrationNumber(e.target.value)}
+                required
+              />
             </div>
           </>
         )}
@@ -169,7 +179,12 @@ export function RegisterPage() {
         {role === Role.ClientIndividual && (
           <div className="field">
             <label>{t("auth.fullName")}</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
           </div>
         )}
 
@@ -177,7 +192,12 @@ export function RegisterPage() {
           <>
             <div className="field">
               <label>{t("auth.fullName")}</label>
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
             </div>
             <div className="field">
               <label>{t("auth.licenseNumber")}</label>
@@ -188,6 +208,50 @@ export function RegisterPage() {
                 required
               />
             </div>
+          </>
+        )}
+
+        {role === Role.CarrierCompany && (
+          <>
+            <div className="field">
+              <label>{t("auth.companyName")}</label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>
+                {t("auth.companyRegistrationNumber", "Реєстраційний номер (EUID / HRB)")}
+              </label>
+              <input
+                type="text"
+                value={companyRegistrationNumber}
+                onChange={(e) => setCompanyRegistrationNumber(e.target.value)}
+                required
+              />
+            </div>
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={isCarrierCompany}
+                onChange={(e) => setIsCarrierCompany(e.target.checked)}
+              />
+              {t("auth.alsoDrives", "Я також особисто керую автомобілем")}
+            </label>
+            {isCarrierCompany && (
+              <div className="field">
+                <label>{t("auth.licenseNumber")}</label>
+                <input
+                  type="text"
+                  value={licenseNumber}
+                  onChange={(e) => setLicenseNumber(e.target.value)}
+                  required
+                />
+              </div>
+            )}
           </>
         )}
 

@@ -1,7 +1,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import "./LoginPage.css";
+import "../pages/LoginPage.css";
 
 const LANGS = ["de", "en", "uk"] as const;
 

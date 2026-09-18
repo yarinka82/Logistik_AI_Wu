@@ -1,12 +1,12 @@
 
 import React, { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axios, { isAxiosError } from "axios";
+import { isAxiosError } from "axios";
 import { toast } from "../components/Notifier";
-import "./ProfilePage.css";
+import { resetPasswordConfirmRequest } from "../api/auth";
+import {AuthLayout} from "../layouts/AuthLayout.tsx";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/auth";
 
 export const ResetPasswordConfirmPage: React.FC = () => {
   const { t } = useTranslation();
@@ -29,13 +29,16 @@ export const ResetPasswordConfirmPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`${API_BASE}/password-reset-confirm/`, {
-        uid,
-        token,
+      // Аккуратный вызов готовой функции:
+      await resetPasswordConfirmRequest({
+        uid: uid!,
+        token: token!,
         new_password: newPassword,
       });
 
-      toast.success(t("auth.passwordResetSuccess", "Пароль успішно змінено! Увійдіть з новим паролем."));
+      toast.success(
+        t("auth.passwordResetSuccess", "Пароль успішно змінено! Увійдіть з новим паролем.")
+      );
       navigate("/login");
     } catch (err: unknown) {
       let msg = t("auth.passwordResetError", "Посилання застаріло або недійсне");
@@ -50,70 +53,73 @@ export const ResetPasswordConfirmPage: React.FC = () => {
   };
 
   return (
-    <div className="profile-container" style={{ maxWidth: "460px", marginTop: "80px" }}>
-      <div className="profile-card">
-        <h2 className="profile-title">{t("auth.setNewPasswordTitle", "Встановлення нового пароля")}</h2>
-        <p className="profile-subtitle">
-          {t("auth.setNewPasswordDesc", "Введіть новий пароль для вашого облікового запису")}
-        </p>
+    <AuthLayout
+      heroTitleKey="auth.resetPasswordHeroTitle"
+      heroSubtitleKey="auth.resetPasswordHeroSubtitle"
+    >
+      <h2>{t("auth.setNewPasswordTitle", "Встановлення нового пароля")}</h2>
+      <p className="lede">
+        {t("auth.setNewPasswordDesc", "Введіть новий пароль для вашого облікового запису")}
+      </p>
 
-        <form onSubmit={handleSubmit} className="profile-form">
-          <div className="form-group">
-            <label className="form-label">{t("profile.newPassword", "Новий пароль")}</label>
-            <div className="password-wrap">
-              <input
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="form-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword((v) => !v)}
-                className="eye-btn"
-                tabIndex={-1}
-              >
-                {showNewPassword ? "🙈" : "👁"}
-              </button>
-            </div>
+      <form onSubmit={handleSubmit}>
+        <div className="field">
+          <label>{t("profile.newPassword", "Новий пароль")}</label>
+          <div className="password-wrap">
+            <input
+              type={showNewPassword ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword((v) => !v)}
+              className="eye-btn"
+              tabIndex={-1}
+              aria-label={showNewPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+            >
+              {showNewPassword ? "🙈" : "👁"}
+            </button>
           </div>
-
-          <div className="form-group">
-            <label className="form-label">{t("profile.confirmNewPassword", "Підтвердження нового пароля")}</label>
-            <div className="password-wrap">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="form-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                className="eye-btn"
-                tabIndex={-1}
-              >
-                {showConfirmPassword ? "🙈" : "👁"}
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" disabled={submitting} className="btn-submit btn-submit-success">
-            {submitting ? t("common.saving", "Збереження...") : t("auth.saveNewPasswordBtn", "Зберегти новий пароль")}
-          </button>
-        </form>
-
-        <div style={{ marginTop: "20px", textAlign: "center" }}>
-          <Link to="/login" style={{ color: "#00d2b4", fontSize: "13px", textDecoration: "none" }}>
-            ← {t("auth.backToLogin", "Повернутися до входу")}
-          </Link>
         </div>
-      </div>
-    </div>
+
+        <div className="field">
+          <label>{t("profile.confirmNewPassword", "Підтвердження нового пароля")}</label>
+          <div className="password-wrap">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((v) => !v)}
+              className="eye-btn"
+              tabIndex={-1}
+              aria-label={showConfirmPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+            >
+              {showConfirmPassword ? "🙈" : "👁"}
+            </button>
+          </div>
+        </div>
+
+        <button className="submit-btn" type="submit" disabled={submitting}>
+          {submitting
+            ? t("common.saving", "Збереження...")
+            : t("auth.saveNewPasswordBtn", "Зберегти новий пароль")}
+        </button>
+      </form>
+
+      <p className="fine-print" style={{ marginTop: "1.5rem" }}>
+        <Link to="/login">← {t("auth.backToLogin", "Повернутися до входу")}</Link>
+      </p>
+    </AuthLayout>
   );
 };
 

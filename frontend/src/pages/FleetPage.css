@@ -1,174 +1,447 @@
 
-.fleet-page{
-  padding:32px;
-  font-family:'Inter', sans-serif;
-  color: var(--ink);
-}
-.fleet-page h1{
+/* ==========================================================================
+   1. MAIN LAYOUT & HEADER
+   ========================================================================== */
+.fleet-page {
+  padding: 32px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--ink);
 }
 
-.fleet-tabs{
-  display:flex;
-  gap:24px;
-  margin:20px 0;
-  border-bottom:1px solid var(--border);
+.fleet-page h1 {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
 }
-.fleet-tab{
-  padding-bottom:10px;
-  cursor:pointer;
+
+/* ==========================================================================
+   2. TABS & FILTER BUTTONS
+   ========================================================================== */
+.fleet-tabs {
+  display: flex;
+  gap: 24px;
+  margin: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fleet-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  cursor: pointer;
   color: var(--ink-soft);
-}
-.fleet-tab.active{
-  color: var(--accent);
-  border-bottom:2px solid var(--accent);
-  font-weight:600;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.driver-form{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
-.driver-form input{
-  padding:8px 10px;
-  border:1px solid var(--border);
-  border-radius:6px;
-  background: transparent;
+.fleet-tab:hover {
   color: var(--ink);
 }
-.file-label{ display:flex; flex-direction:column; font-size:12px; color: var(--ink-soft); }
 
-.fleet-table{ width:100%; border-collapse:collapse; }
-.fleet-table th{
-  text-align:left;
-  padding:10px;
-  border-bottom:1px solid var(--border);
+.fleet-tab.active {
+  color: var(--accent, #00d2b4);
+  border-bottom: 2px solid var(--accent, #00d2b4);
+  font-weight: 600;
+}
+
+.tab-badge {
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+/* Кнопки-фильтры статуса (Всі / Заявки / У штаті) */
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.filter-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--chip-bg, #f3f4f6);
   color: var(--ink-soft);
-  font-weight:600;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.fleet-table td{
-  text-align:left;
-  padding:10px;
-  border-bottom:1px solid var(--border);
+
+.filter-btn:hover {
+  background: var(--border);
   color: var(--ink);
 }
 
-.badge-warning{
-  margin-left:8px;
-  font-size:11px;
-  padding:2px 8px;
-  border-radius:999px;
-  background:#FFF3E0;
-  color:#B45309;
+.filter-btn.active {
+  background: var(--accent, #00d2b4);
+  color: #ffffff;
+  border-color: var(--accent, #00d2b4);
+  font-weight: 600;
 }
 
-.invite-panel{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-bottom:24px;
+/* ==========================================================================
+   3. TABLE & ROWS
+   ========================================================================== */
+.fleet-content {
+  margin-top: 16px;
 }
-.invite-panel > button{
-  padding:9px 16px;
-  border:none;
-  border-radius:8px;
-  background: var(--accent);
-  color: var(--header-bg);
-  font-weight:600;
-  cursor:pointer;
+
+.fleet-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface, #ffffff);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
-.invite-chip{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 12px;
-  border:1px solid var(--border);
-  border-radius:999px;
-  font-size:12px;
+
+.fleet-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: var(--chip-bg, #f9fafb);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fleet-table td {
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.fleet-table tr:last-child td {
+  border-bottom: none;
+}
+
+.company-picker-modal { min-width: 900px; max-width: 900px; }
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.row-actions button {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+
+.row-actions button:hover {
+  background: var(--chip-bg, #f3f4f6);
+  border-color: var(--border);
+}
+
+.empty-state {
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 32px 0;
+  text-align: center;
+}
+
+/* ==========================================================================
+   4. STATUS BADGES
+   ========================================================================== */
+.badge-success {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #def7ec;
+  color: #03543f;
+}
+
+.badge-warning {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  margin-left: 6px;
+}
+
+.badge-danger {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fde2e2;
+  color: #b91c1c;
+  margin-left: 6px;
+}
+
+/* ==========================================================================
+   5. THUMBNAILS & ATTACHMENTS
+   ========================================================================== */
+.license-thumb {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: transform 0.15s ease;
+}
+
+.license-thumb:hover {
+  transform: scale(1.05);
+}
+
+.pdf-thumb {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--chip-bg, #f3f4f6);
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.pdf-thumb:hover {
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   6. MODALS (PHOTO PREVIEW & CONFIRMATION)
+   ========================================================================== */
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: zoom-out;
+  padding: 20px;
+}
+
+.photo-modal img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.pdf-modal-frame {
+  width: min(90vw, 840px);
+  height: 90vh;
+  border: none;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.confirm-modal {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.confirm-modal p {
+  margin: 0;
+  font-size: 14px;
   color: var(--ink);
 }
-.invite-code{
-  font-family:'JetBrains Mono', monospace;
-  font-weight:600;
-}
-.invite-expires{ color: var(--ink-soft); }
-.invite-chip button{
-  border:none;
-  background:none;
-  color: var(--accent);
-  cursor:pointer;
-  font-size:12px;
-}
-.empty-state{ color: var(--ink-soft); font-size:14px; padding:20px 0; }
 
-.license-thumb{
-  width:40px; height:40px; object-fit:cover;
-  border-radius:6px; cursor:pointer; border:1px solid var(--border);
-}
-.row-actions{ display:flex; gap:8px; }
-.row-actions button{
-  background:none; border:none; cursor:pointer; font-size:16px;
-}
-.photo-modal{
-  position:fixed; inset:0; background:rgba(0,0,0,0.8);
-  display:flex; align-items:center; justify-content:center; z-index:1000;
-  cursor:zoom-out;
-}
-.photo-modal img{
-  max-width:90vw; max-height:90vh; border-radius:8px;
-}
-
-.pdf-thumb{
-  width:40px; height:40px;
-  display:flex; align-items:center; justify-content:center;
-  border-radius:6px;
-  border:1px solid var(--border);
-  font-size:18px;
-  cursor:pointer;
-}
-.pdf-modal-frame{
-  width:min(90vw, 800px);
-  height:90vh;
-  border:none;
-  border-radius:8px;
-  background:#fff;
-}
-
-.confirm-modal-backdrop{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,0.5);
-  display:flex; align-items:center; justify-content:center;
-  z-index:1000;
-}
-.confirm-modal{
-  background: var(--surface, #161b22);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:24px;
-  max-width:340px;
-  text-align:center;
-}
-.confirm-modal-name{
-  font-weight:600;
+.confirm-modal-name {
+  font-size: 16px;
+  font-weight: 600;
   color: var(--ink);
-  margin:8px 0 20px;
+  margin: 10px 0 20px !important;
 }
-.confirm-modal-actions{
-  display:flex;
-  gap:10px;
-  justify-content:center;
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }
-.btn-secondary, .btn-danger{
-  padding:8px 16px;
-  border-radius:8px;
-  border:none;
-  cursor:pointer;
-  font-size:13px;
-  font-weight:600;
+
+.btn-secondary,
+.btn-danger {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
 }
-.btn-secondary{
-  background: var(--chip-bg);
+
+.btn-secondary {
+  background: var(--chip-bg, #f3f4f6);
   color: var(--ink);
+  border: 1px solid var(--border);
 }
-.btn-danger{
-  background:#e5484d;
-  color:#fff;
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
+.btn-danger {
+  background: #e5484d;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* ==========================================================================
+   7. VEHICLE DETAIL (CARD, KEY-VALUE GRID, EDIT FORM)
+   ========================================================================== */
+.employment-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.vehicle-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 14px 24px;
+  margin: 0;
+  align-items: baseline;
+}
+
+.vehicle-detail-grid dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.vehicle-detail-grid dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .vehicle-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+  }
+  .vehicle-detail-grid dt {
+    margin-top: 14px;
+  }
+}
+
+/* Поля формы редактирования */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+
+.field label {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.field input,
+.field select {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--accent, #00d2b4);
+}
+
+.confirm-modal-actions {
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   8. PRIMARY BUTTON
+   ========================================================================== */
+.btn-primary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent, #00d2b4);
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
