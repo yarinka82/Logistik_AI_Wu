@@ -55,7 +55,7 @@ export function DriverCompanySection() {
     };
   }, [api, employer]);
 
-  // 1. Подача заявки
+  // 1. Application
   const handleRequestJoin = async () => {
     if (!selectedCompanyId) {
       toast.warning(t("fleet.chooseCompanyWarning", "Будь ласка, оберіть компанію зі списку"));
@@ -79,7 +79,7 @@ export function DriverCompanySection() {
     }
   };
 
-  // 2. Отмена заявки
+  // Cancel booking
   const handleCancelRequest = async () => {
     setSubmitting(true);
     try {
@@ -93,7 +93,7 @@ export function DriverCompanySection() {
     }
   };
 
-  // 3. Выход из компании
+  // 3. Withdrawal
   const handleLeaveCompany = async () => {
     if (!window.confirm(t("fleet.confirmLeave", "Ви впевнені, що хочете покинути компанію?"))) {
       return;
@@ -124,7 +124,7 @@ export function DriverCompanySection() {
           : t("fleet.selectCompanyDesc", "Оберіть компанію-перевізника для приєднання")}
       </p>
 
-      {/* 1. Водитель утвержден в штате */}
+      {/*1. Driver is state-approved*/}
       {employer && isConfirmed && (
         <div style={{ background: "rgba(16, 185, 129, 0.08)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
@@ -154,7 +154,7 @@ export function DriverCompanySection() {
         </div>
       )}
 
-      {/* 2. Заявка на рассмотрении */}
+      {/*2. The application is under consideration*/}
       {employer && !isConfirmed && (
         <div style={{ background: "rgba(245, 158, 11, 0.08)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(245, 158, 11, 0.25)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
@@ -182,7 +182,7 @@ export function DriverCompanySection() {
         </div>
       )}
 
-      {/* 3. Свободный водитель — форма подачи заявки */}
+      {/*3. Available Driver — Application Form*/}
       {!employer && (
         <div className="profile-form">
           <div className="form-group">

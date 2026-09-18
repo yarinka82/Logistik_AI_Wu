@@ -10,7 +10,7 @@ import type {
 } from "../types";
 
 // ==========================================
-// 1. ВОДІЇ (ПАНЕЛЬ ВЛАСНИКА)
+// 1. DRIVERS (OWNER PANEL)
 // ==========================================
 
 export function fetchDriversRequest(
@@ -49,7 +49,7 @@ export function dismissDriverRequest(api: AxiosInstance, driverId: number | stri
 }
 
 // ==========================================
-// 2. ЗАЯВКИ ВОДІЯ (ВЛАСНИЙ ПРОФІЛЬ)
+// 2. DRIVER APPLICATIONS (OWN PROFILE)
 // ==========================================
 
 export function fetchCarrierCompaniesRequest(
@@ -77,7 +77,7 @@ export function leaveCompanyRequest(api: AxiosInstance) {
 }
 
 // ==========================================
-// 3. ТРАНСПОРТ
+// 3. Transportation
 // ==========================================
 
 export function fetchVehiclesRequest(

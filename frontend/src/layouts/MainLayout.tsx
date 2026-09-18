@@ -38,12 +38,12 @@ export function MainLayout() {
     <div className="app-shell">
       <Sidebar />
 
-      {/* Основная правая область */}
+      {/*Main right area*/}
       <div className="app-main">
         <header className="topbar">
           <LanguageSwitch />
 
-          {/* Плашка пользователя */}
+          {/*User plate*/}
           <div
             className="user-profile-btn"
             onClick={() => navigate("/profile")}
@@ -63,7 +63,7 @@ export function MainLayout() {
           </button>
         </header>
 
-        {/* Контент активной страницы */}
+        {/*Active page content*/}
         <main className="main-content">
           <Outlet />
         </main>

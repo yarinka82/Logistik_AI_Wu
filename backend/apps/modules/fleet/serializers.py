@@ -21,14 +21,14 @@ class DriverProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "driver_type", "status", "email", "phone",
-            # employer/is_confirmed_by_employer/confirmed_at сюда намеренно не включены —
-            # ими управляют только request_join/approve/dismiss, не прямой PATCH
+            # employer/is_confirmed_by_employer/confirmed_at not intentionally included here —
+            # they are only managed by request_join/approve/dismiss, not direct PATCH
         ]
         
         
         
 class StaffDriverListSerializer(serializers.ModelSerializer):
-    """Только чтение — для GET /fleet/staff-drivers/."""
+    """Read-only — for GET /fleet/staff-drivers/."""
     email = serializers.EmailField(source="user.email", read_only=True)
     phone = serializers.CharField(source="user.phone", read_only=True)
     is_active = serializers.BooleanField(source="user.is_active", read_only=True)
@@ -77,7 +77,7 @@ class StaffDriverUpdateSerializer(serializers.ModelSerializer):
 
 
 class StaffDriverDetailSerializer(serializers.ModelSerializer):
-    """GET (detail) + PATCH для одного водія з панелі компанії."""
+    """GET (detail) + PATCH for one driver from the company dashboard."""
     email = serializers.EmailField(source="user.email", read_only=True)
     phone = serializers.CharField(source="user.phone", read_only=True)
     is_active = serializers.BooleanField(source="user.is_active", read_only=True)
@@ -87,7 +87,7 @@ class StaffDriverDetailSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # default_vehicle можна вибирати тільки з транспорту тієї ж компанії
+        # default_vehicle can only be selected from vehicles of the same company
         request = self.context.get("request")
         if request is not None:
             carrier = getattr(request.user, "carrier_company_profile", None)
@@ -115,7 +115,7 @@ class StaffDriverDetailSerializer(serializers.ModelSerializer):
         model = DriverProfile
         fields = [
             "id",
-            # редагується компанією
+            # edited by company
             "full_name",
             "driver_license_number",
             "base_city",
@@ -126,7 +126,7 @@ class StaffDriverDetailSerializer(serializers.ModelSerializer):
             "has_adr",
             "adr_expiry_date",
             "default_vehicle",
-            # тільки читання
+            # read-only
             "license_photo",
             "email",
             "phone",
@@ -220,7 +220,7 @@ class CarrierCompanyRegistrationSerializer(serializers.Serializer):
 
 
 class EmployerShortSerializer(serializers.ModelSerializer):
-    """Краткая информация о компании-работодателе."""
+    """Brief information about the employing company."""
 
     class Meta:
         model = CarrierCompanyProfile
@@ -242,11 +242,11 @@ class DriverProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "driver_license_number",
             "license_photo",
-            # Связь с компанией (может быть null)
+            # Communication with the company (can be null)
             "employer",
             "is_confirmed_by_employer",
             "confirmed_at",
-            # Личные параметры водителя
+            # Driver's personal settings
             "driver_type",
             "status",
             "base_city",

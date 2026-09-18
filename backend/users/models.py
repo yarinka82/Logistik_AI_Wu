@@ -20,8 +20,10 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
     role = models.CharField(max_length=20, choices=Role.choices)
-    is_verified = models.BooleanField(default=False)  # confirmed by admin
-
+    is_verified = models.BooleanField(default=False)
+    is_blocked = models.BooleanField(default=False)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username", "role"]
 

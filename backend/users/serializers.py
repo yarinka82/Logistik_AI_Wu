@@ -171,7 +171,7 @@ class UserSerializer(serializers.ModelSerializer):
         return None
     
     def get_profile_data(self, obj):
-        # 1. Компания-перевозчик (новая роль)
+        # 1. Carrier company (new role)
         if (
             obj.role == User.Role.CARRIER_COMPANY
             and hasattr(obj, "carrier_company_profile")
@@ -184,7 +184,7 @@ class UserSerializer(serializers.ModelSerializer):
                 ),
             }
 
-        # 2. Клиент (юрлицо)
+        # 2. Client (legal entity)
         elif (
             obj.role == User.Role.CLIENT_COMPANY
             and hasattr(obj, "client_company_profile")
@@ -196,7 +196,7 @@ class UserSerializer(serializers.ModelSerializer):
                 ),
             }
 
-        # 3. Клиент (физлицо)
+        # 3. Client (individual)
         elif (
             obj.role == User.Role.CLIENT_INDIVIDUAL
             and hasattr(obj, "client_individual_profile")
@@ -205,7 +205,7 @@ class UserSerializer(serializers.ModelSerializer):
                 "full_name": obj.client_individual_profile.full_name,
             }
 
-        # 4. Водитель (может быть с компанией или без)
+        # 4. Driver (with or without company)
         elif obj.role == User.Role.DRIVER and hasattr(obj, "driver_profile"):
             driver = obj.driver_profile
             employer_data = None
@@ -223,7 +223,7 @@ class UserSerializer(serializers.ModelSerializer):
                 "full_name": driver.full_name,
                 "driver_license_number": driver.driver_license_number,
                 "is_confirmed_by_employer": driver.is_confirmed_by_employer,
-                "employer": employer_data,  #  null, если водитель одиночка
+                "employer": employer_data,  # null if the driver is single
             }
 
         return {}
@@ -288,3 +288,19 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         attrs["user"] = user
         return attrs
+    
+    
+
+class UserAdminListSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "full_name", "email", "phone",
+            "role", "is_verified", "is_blocked",
+            "blocked_at", "date_joined",
+        ]
+
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username

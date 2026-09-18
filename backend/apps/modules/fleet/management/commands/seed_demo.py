@@ -100,14 +100,14 @@ class Command(BaseCommand):
                 self.stdout.write(f"  + {full_name} ({email})")
 
     def create_carrier_with_fleet(self) -> CarrierCompanyProfile:
-        # Создаем пользователя с ролью CARRIER_COMPANY
+        # Creating a user with the role of CARRIER_COMPANY
         carrier_user, created = self._get_or_create_user(
             "fracht-team@example.de",
             "fracht_team",
             User.Role.CARRIER_COMPANY,
         )
 
-        # Создаем профиль компании CarrierCompanyProfile
+        # Creating a CarrierCompanyProfile profile
         carrier_company, profile_created = (
             CarrierCompanyProfile.objects.get_or_create(
                 user=carrier_user,
@@ -120,7 +120,7 @@ class Command(BaseCommand):
         if profile_created:
             self.stdout.write(f"  + Компанія-перевізник: fracht-team@example.de")
 
-        # Штатные водители
+        # Full-time drivers
         staff = [
             (
                 "stefan.koch@example.de",
@@ -151,7 +151,7 @@ class Command(BaseCommand):
                     user=user,
                     full_name=full_name,
                     driver_license_number=license_number,
-                    employer=carrier_company,  # 👈 Ссылается на CarrierCompanyProfile
+                    employer=carrier_company,
                     is_confirmed_by_employer=True,
                 )
                 self.stdout.write(f"    + штатний водій: {full_name} ({email})")
@@ -159,7 +159,7 @@ class Command(BaseCommand):
                 profile = user.driver_profile
             staff_profiles.append(profile)
 
-        # Автопарк
+        # MOTOR POOL
         today = date.today()
         # plate, brand, model, driver, insurance_exp, tech_exp, gvw_kg, payload_kg, pallets
         vehicles = [
@@ -222,7 +222,7 @@ class Command(BaseCommand):
             vehicle, created = Vehicle.objects.get_or_create(
                 plate_number=plate,
                 defaults={
-                    "carrier": carrier_company,  # 👈 Ссылается на компанию (или carrier_user если FK на User)
+                    "carrier": carrier_company,
                     "brand": brand,
                     "model": model,
                     "assigned_driver": driver,
@@ -245,7 +245,7 @@ class Command(BaseCommand):
             "hans.zimmer@example.de", "hans_zimmer", User.Role.DRIVER
         )
         if created:
-            # Водитель-одиночка без employer
+            # Single driver without employer
             DriverProfile.objects.create(
                 user=user,
                 full_name="Hans Zimmermann",
