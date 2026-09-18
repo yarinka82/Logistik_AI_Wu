@@ -10,12 +10,12 @@ from django.db import models
 
 class User(AbstractUser):
     class Role(models.TextChoices):
-        CLIENT_COMPANY = "client_company", "Замовник — фірма"
-        CLIENT_INDIVIDUAL = "client_individual", "Замовник — фізична особа"
-        DRIVER = "driver", "Водій / перевізник"
-        CARRIER_COMPANY = "carrier_company", "Перевізник — компанія"
-        ACCOUNTANT = "accountant", "Бухгалтер"
-        ADMIN = "admin", "Адміністратор системи"
+        CLIENT_COMPANY = "client_company", "Client — Company"
+        CLIENT_INDIVIDUAL = "client_individual", "Client — Individual"
+        DRIVER = "driver", "Driver / Carrier"
+        CARRIER_COMPANY = "carrier_company", "Carrier — Company"
+        ACCOUNTANT = "accountant", "Accountant"
+        ADMIN = "admin", "System Administrator"
 
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
