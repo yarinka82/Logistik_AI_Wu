@@ -101,9 +101,10 @@
     "sending": "Sending..."
   },
   "fleet": {
-        "accountActive": "Account active",
+    "accountActive": "Account active",
     "accountSection": "Account details",
     "actionError": "Action failed",
+    "addVehicle": "Add Vehicle",
     "adrExpiry": "ADR valid until",
     "approve": "Approve",
     "backToFleet": "Back to drivers list",
@@ -205,6 +206,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "profile": "My Profile",
     "fleet": "My Fleet",
     "loading": "Loading...",
     "accountant": "Accounting"

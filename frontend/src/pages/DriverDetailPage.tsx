@@ -14,8 +14,8 @@ import {
 } from "../api/fleet";
 import { toast } from "../components/Notifier";
 import { type DriverDetail, Role, type UpdateDriverPayload } from "../types";
+import {formatDate} from "../utils/formatters.ts";
 
-/** Категорії — підлаштуй під реальний довідник на бекенді. */
 const LICENSE_CATEGORIES = ["B", "BE", "C1", "C1E", "C", "CE", "D1", "D1E", "D", "DE"];
 const CODE_95_CATEGORIES = ["C", "D"];
 
@@ -94,7 +94,6 @@ export function DriverDetailPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [failedId, setFailedId] = useState<number | null>(null);
-  // Похідне значення замість окремого setLoading — без setState прямо в ефекті.
   const loading = validId && failedId !== driverId && driver?.id !== driverId;
   const [form, setForm] = useState<UpdateDriverPayload>({});
   const [saving, setSaving] = useState(false);
@@ -157,7 +156,6 @@ export function DriverDetailPage() {
     }
     setSaving(true);
     try {
-      // PATCH тільки змінені поля
       const { data } = await updateDriverRequest(api, driver.id, form);
       setDriver(data);
       setForm({});
@@ -400,7 +398,7 @@ export function DriverDetailPage() {
             </tr>
             <tr>
               <td>{t("fleet.confirmedAt", "Підтверджено")}</td>
-              <td>{driver.confirmed_at ? new Date(driver.confirmed_at).toLocaleDateString("uk") : "—"}</td>
+              <td>{formatDate(driver.confirmed_at)}</td>
             </tr>
             <tr>
               <td>{t("fleet.accountActive", "Акаунт активний")}</td>
@@ -484,5 +482,4 @@ export function DriverDetailPage() {
         </div>
       )}
     </div>
-  );
-}
+  );}
