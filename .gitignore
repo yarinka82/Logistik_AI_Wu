@@ -217,6 +217,12 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Django staticfiles & media
+staticfiles/
+backend/staticfiles/
+media/
+backend/media/
+
 # ==========================================
 # Frontend (Node, React, Vite, Build artifacts)
 # ==========================================
