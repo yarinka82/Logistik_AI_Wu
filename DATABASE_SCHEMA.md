@@ -9,22 +9,9 @@
 
 ---
 
-## 0. Історія змін документації
-
-| Дата | Зміна |
-|---|---|
-| 2026-09-16 | `clients`: додано журнал верифікації — `verified_by`, `verified_at` + `CONSTRAINT chk_client_verification_log`. |
-| 2026-09-16 | `vehicles`: додано прямий зв'язок з юридичним власником — `owner_client_id` (FK → `clients`) + індекс `idx_vehicles_owner_client_id`. |
-| 2026-09-16 | `orders`: додано тригер узгодженості `adr_required` ↔ `drivers.has_adr` — `trg_validate_order_adr_compliance` / `trg_before_order_adr_check`, за тим самим принципом, що й вже наявний `trg_validate_order_executor`. |
-| 2026-09-16 | Перевірено й підтверджено: колонки `orders.client_name` у канонічній схемі ніколи не було — вона існувала лише в тестовому Excel-файлі й там же видалена. DDL тут ні до чого. |
-| 2026-09-16 | SQL-файл консолідовано в один файл `001_smartlog_core_mvp_marketplace_schema.sql`, який повністю замінює `01_smartlog_core_mvp_marketplace_schema.sql`. Усі зміни, що раніше постачались окремим ALTER-патчем, тепер вбудовані напряму в `CREATE TABLE`. |
-| 2026-09-20 | `drivers`: додано тригер узгодженості `driver_type` ↔ `linked_client_id.client_type` — `trg_validate_driver_linked_client` / `trg_before_driver_linked_client_check`. `self_employed` водій зобов'язаний мати `linked_client_id` на `client_type='solo_carrier'`; `company_employee` — на `client_type='company'` (або тимчасово `NULL` до підтвердження власником компанії). |
-
----
-
 ## 1. Призначення
 
-Цей документ описує фактичну структуру та логіку SQL-скрипту `001_smartlog_core_mvp_marketplace_schema.sql`.
+Цей документ описує фактичну структуру та логіку SQL-скрипту `01_smartlog_core_mvp_marketplace_schema.sql`.
 
 База даних **SmartLog Europe** призначена для ядра логістичної платформи з такими функціональними напрямами:
 
@@ -402,14 +389,20 @@ idx_vat_rates_current_per_country
 
 > Це перевіряє лише внутрішню узгодженість полів усередині `drivers`. Звірку `has_adr` водія з вимогою `orders.adr_required` конкретного замовлення виконує окремий тригер — див. §8.5.
 
-### Узгодженість `driver_type` ↔ `linked_client_id` (додано 2026-09-20)
+### Узгодженість `driver_type` ↔ `linked_client_id` (оновлено 2026-09-23, замінює рішення від 2026-09-20)
 
-`linked_client_id` тепер обов'язково має вказувати на `clients`-запис правильного типу:
+`linked_client_id` тепер `NOT NULL` і ЗАВЖДИ має вказувати на `clients`-запис правильного типу, для обох типів водіїв:
 
-- `driver_type = 'self_employed'` → `linked_client_id` обов'язковий і має вказувати на `client_type = 'solo_carrier'`;
-- `driver_type = 'company_employee'` → `linked_client_id` може тимчасово бути `NULL` (водій зареєструвався, але ще не підтверджений власником компанії); якщо заданий — має вказувати на `client_type = 'company'`.
+- `driver_type = 'self_employed'` → `linked_client_id` обов'язковий, вказує на `client_type = 'solo_carrier'`;
+- `driver_type = 'company_employee'` → `linked_client_id` обов'язковий, вказує на `client_type = 'company'`.
+
+Причина зміни: за ТЗ Product Manager найманого водія створює власник фірми напряму (кнопка "+ Додати водія" у кабінеті, система сама шле SMS + тимчасовий PIN для входу) — окремої самореєстрації для найманого водія в продукті немає, тож `linked_client_id` відомий одразу в момент створення запису. `ON DELETE` для FK змінено з `SET NULL` на `RESTRICT` — видалити `client`, поки на нього посилається хоч один водій, не можна (захист від "осиротілих" записів).
 
 Детальніше про бізнес-логіку та SQL — див. §8.6.
+
+### Авто-блокування (додано 2026-09-23)
+
+`blocked_at`, `blocked_reason` — аудит-поля, які заповнює тригер `fn_evaluate_driver_auto_block`, коли `status` автоматично переходить у `inactive`. Дивись §8.8 та §5.12 (`fraud_reports`).
 
 ---
 
@@ -421,8 +414,8 @@ idx_vat_rates_current_per_country
 |---|---|
 | `route_id` | PK |
 | `route_name` | Назва маршруту |
-| `planned_geometry` | PostGIS `LineString`, SRID 4326 |
-| `planned_distance_km` | Планова відстань |
+| `planned_geometry` | PostGIS `LineString`, SRID 4326. **`NULL`-able з 2026-09-23** |
+| `planned_distance_km` | Планова відстань (обов'язкова) |
 | `origin_country` | Країна початку |
 | `destination_country` | Країна призначення |
 | `is_cross_border` | Generated column |
@@ -434,6 +427,8 @@ origin_country <> destination_country
 ```
 
 Просторова геометрія має `GIST` index.
+
+> **`planned_geometry` тепер необов'язкова (додано 2026-09-23).** За спрощеною MVP-логікою PM бекенд не малює реальний маршрут на мапі — досить `planned_distance_km` (введена вручну або оцінена по прямій) і GPS-точок у `delivery_track_points`, які фіксуються при натисканні кнопок водієм ("Виїхав" / "Прибув" / "Доставив"), а не безперервним трекінгом. Функція `is_route_deviated()` (§9 — PostGIS-функції) вже коректно обробляла `NULL`-геометрію (повертає `NULL` замість помилки) — перевірено наживо, зміна нічого не ламає. Геометрія заповнюється пізніше, коли з'явиться модуль побудови реального маршруту.
 
 ---
 
@@ -495,6 +490,19 @@ match_status = both_confirmed
 Якщо `is_reverse_charge = TRUE`, `vat_rate_pct` повинен бути `0.00`.
 
 Окремий trigger автоматично визначає VAT.
+
+### Фінальне підтвердження — статус `closed` (додано 2026-09-23)
+
+`order_status_enum` доповнено значенням `closed`, яке йде після `delivered`. Різниця:
+
+- `delivered` — водій сам натиснув "Доставлено" (у мобільному додатку);
+- `closed` — окремо клієнт або бухгалтер підтвердив, що все гаразд, і рахунок можна виставляти (ТЗ PM: "Бухгалтер чи замовник натиснув кнопку 'Зроблено'/'Затверджено'").
+
+Аудит: `closed_by` (email/ID того, хто підтвердив), `closed_at`. `CONSTRAINT chk_order_closed_log` вимагає, щоб обидва поля були заповнені разом зі статусом `closed` (і порожні в будь-якому іншому статусі) — той самий патерн, що й `chk_client_verification_log` у `clients`.
+
+> Назва навмисно `closed`, а не `confirmed` — значення `confirmed` в цьому ж enum вже зайняте станом "виконавця підтверджено обома сторонами" (`match_status = both_confirmed`), і використання його вдруге для іншого сенсу заплутало б аналітику.
+
+> **Відома межа (не вирішено зараз):** CHECK-constraint не може перевірити послідовність переходів (наприклад, заборонити `closed` одразу з `draft`, минаючи `delivered`) — це вимагає окремого BEFORE UPDATE-тригера. Поки що контроль порядку статусів лишається на бекенді.
 
 ---
 
@@ -639,6 +647,25 @@ other
 - `ferry_bridge`.
 
 `is_repair = TRUE` дозволено лише для `cost_type = 'maintenance'`.
+
+---
+
+## 5.12. `fraud_reports` (додано 2026-09-23)
+
+Скарги клієнтів на водіїв ("Повідомити про шахрайство", ТЗ PM §6.2 "Саморегуляція біржі").
+
+| Поле | Призначення |
+|---|---|
+| `report_id` | PK |
+| `reported_driver_id` | FK → `drivers`, на кого скарга |
+| `reporter_client_id` | FK → `clients`, хто поскаржився |
+| `order_id` | FK → `orders`, необов'язковий контекст (у рамках якого замовлення) |
+| `reason` | Текст скарги |
+| `created_at` | Час подання |
+
+> **Не для чого ця таблиця:** скарг на замовників тут немає (лише клієнт → водій, як описано в ТЗ), і немає захисту від зовнішніх атак (підбір паролів, DDoS, сканування неіснуючих адрес) — це свідомо залишено поза бізнес-БД, рекомендовано інфраструктурний рівень (WAF / rate-limiting), рішення власника продукту від 2026-09-23.
+>
+> **MVP-спрощення:** авто-блокування (§8.8) рахує СУМАРНУ кількість рядків на водія, а не буквальне "2 клієнти поспіль" з ТЗ — послідовність скарг у прив'язці до замовлень окремо не відстежується.
 
 ---
 
@@ -840,33 +867,31 @@ IF adr_required = TRUE AND executor_type = 'fop_driver' AND executor_id IS NOT N
 
 ---
 
-## 8.6. Узгодженість `driver_type` ↔ `linked_client_id` (додано 2026-09-20)
+## 8.6. Узгодженість `driver_type` ↔ `linked_client_id` (оновлено 2026-09-23, замінює рішення від 2026-09-20)
 
 `trg_validate_driver_linked_client` / `trg_before_driver_linked_client_check`
 
 **Бізнес-проблема:** до цієї зміни `drivers.linked_client_id` міг посилатися на будь-який запис у `clients`, незалежно від його `client_type`. Нічого не заважало (помилково, вручну або багом бекенду) прив'язати самозайнятого водія до компанії або навпаки — а це два принципово різні бізнес-сценарії: самозайнятий водій (`self_employed`) сам є білінговою/юридичною стороною (сплачує податки, отримує оплату напряму, може володіти власним авто через `vehicles.owner_client_id`), тоді як найманий водій (`company_employee`) — лише виконавець, гроші й юридична відповідальність йдуть через його роботодавця.
 
-**Правило:**
+**Правило (з 2026-09-23):**
 
 ```text
-IF linked_client_id IS NULL:
-    IF driver_type = 'self_employed' → EXCEPTION
-       (самозайнятий водій зобов'язаний мати власний білінговий client-запис)
-    IF driver_type = 'company_employee' → дозволено (перехідний стан "ще не підтверджений власником")
+IF linked_client_id IS NULL → EXCEPTION (обов'язковий для будь-якого driver_type)
 
-IF linked_client_id IS NOT NULL:
-    перевірити clients.client_type для linked_client_id
+перевірити clients.client_type для linked_client_id
     IF driver_type = 'self_employed'    AND client_type <> 'solo_carrier' → EXCEPTION
     IF driver_type = 'company_employee' AND client_type <> 'company'      → EXCEPTION
 ```
 
-**Чому `company_employee` дозволено реєструвати з `linked_client_id = NULL`:** за бізнес-процесом наймані водії реєструються в застосунку самостійно, а власник бізнесу вже потім підтверджує їх і надає доступ до замовлень (ця частина — керування доступом — реалізується на рівні бекенду, поза межами цієї схеми). Тому жорстка вимога `NOT NULL` для `company_employee` заблокувала б цей сценарій самостійної реєстрації. Рішення підтверджено власником продукту 2026-09-20.
+**Чому змінено (джерело: ТЗ Product Manager, `Logistik.docx`, розділ 7.1/9):** попереднє рішення (2026-09-20) виходило з того, що найманий водій реєструється сам, а власник підтверджує його пізніше — тому `company_employee` дозволялось тимчасово мати `linked_client_id = NULL`. ТЗ PM описує протилежний сценарій: **власник фірми сам створює запис водія** через кабінет (кнопка "+ Додати водія": ім'я, телефон, номер авто), і система автоматично шле SMS з посиланням і тимчасовим PIN для входу. Окремої форми самореєстрації для найманого водія на `/register` немає — лише 3 ролі: замовник / приватний водій / фірма. Отже, `linked_client_id` ЗАВЖДИ відомий у момент створення запису `driver`, і потреби в перехідному `NULL`-стані більше немає.
 
-**Архітектурний наслідок для auth-шару (Django):** цей тригер робить непотрібним окремий FK `Client` в `DriverProfile` (auth-шар) — оскільки `drivers.linked_client_id` тепер ГАРАНТОВАНО веде на клієнта правильного типу, доступ до білінгових даних самозайнятого водія отримується через єдиний, вже наявний ланцюжок `DriverProfile.driver → Driver.linked_client_id → Client`, без дублювання зв'язку.
+**Наслідок:** колонка `linked_client_id` тепер `NOT NULL` на рівні таблиці (було `NULL`-able), а `ON DELETE` для FK змінено з `SET NULL` на `RESTRICT` (видалити `client`, доки на нього посилається хоч один водій, не можна). Модуль запитів на доступ (`Design_App_Users_Access_Control_SmartLog_Europe.md` — `app_users` / `driver_company_requests` / `trg_sync_driver_company_link`) для цього сценарію більше не потрібен; документ лишається в Project Knowledge як зафіксована, але відхилена альтернатива (могла б знадобитись, якби продукт таки вирішив дозволити водіям самостійно "проситись" у компанію — окрема бізнес-фіча, не поточне ТЗ).
+
+**Архітектурний наслідок для auth-шару (Django):** без змін порівняно з попередньою версією — окремий FK `Client` в `DriverProfile` (auth-шар) непотрібен, доступ до білінгових даних іде через `DriverProfile.driver → Driver.linked_client_id → Client`.
 
 > DB-тригер спрацьовує лише в момент запису в БД (`IntegrityError`), а не при валідації форми. Для кращого UX цю саму перевірку варто продублювати в `Driver.clean()` на рівні Django — так само, як уже задокументовано для §8.5 (ADR).
 
-Технічно перевірено на живій PostgreSQL 16 + PostGIS (8 сценаріїв): `self_employed` без `linked_client_id` (exception), `self_employed` → `solo_carrier` (успіх), `self_employed` → `company` (exception), `company_employee` без `linked_client_id` (успіх, перехідний стан), `company_employee` → `company` (успіх), `company_employee` → `solo_carrier` (exception), будь-який `driver_type` → `individual` (exception), спроба `UPDATE` коректного запису на невірний тип клієнта (exception) — усі відпрацювали коректно.
+Технічно перевірено на живій PostgreSQL 16 + PostGIS (2026-09-23, 5 сценаріїв на оновленій версії): `company_employee` без `linked_client_id` (exception — вже не дозволено), `company_employee` → `company` (успіх), `company_employee` → `solo_carrier` (exception), `self_employed` → `solo_carrier` (успіх), `DELETE` клієнта, поки на нього посилається водій (exception, `ON DELETE RESTRICT`) — усі відпрацювали коректно.
 
 ---
 
@@ -888,6 +913,37 @@ Payload містить:
 - `updated_at`.
 
 Це може використовувати backend для подальшої трансляції події через WebSocket.
+
+> Це той самий "гачок", який просить ТЗ PM (розділ 8): "статуси через WebSockets у реальному часі" — бекенду не треба будувати окремий механізм опитування (`polling`), можна підписатись на `NOTIFY`.
+
+---
+
+## 8.8. Авто-блокування водія: низький рейтинг або скарги про шахрайство (додано 2026-09-23)
+
+`fn_evaluate_driver_auto_block` + `trg_fraud_report_autoblock` / `trg_after_fraud_report_insert`, а також виклик `fn_evaluate_driver_auto_block` наприкінці `trg_update_driver_ratings` (§8, "SMART SKIP ENGINE").
+
+**Бізнес-проблема (ТЗ PM §6.2, "Саморегуляція біржі"):** платформа працює без адміністратора-модератора в реальному часі, тож захист від шахраїв має спрацьовувати сам. ТЗ вимагає: якщо середній рейтинг водія падає нижче 3.2 ⭐, АБО 2 клієнти поскаржились через "Повідомити про шахрайство" — акаунт блокується автоматично.
+
+**Правило:**
+
+```text
+ПІСЛЯ кожного оновлення avg_customer_rating (§8, п. 4)
+   АБО кожного нового рядка в fraud_reports:
+
+перевірити (тільки для водіїв зі status <> 'inactive'):
+    IF avg_customer_rating < 3.20:
+        status → 'inactive', blocked_at → now(), blocked_reason → 'auto_block: avg_customer_rating ... < 3.20'
+    ELSE IF COUNT(fraud_reports для цього водія) >= 2:
+        status → 'inactive', blocked_at → now(), blocked_reason → 'auto_block: fraud_reports_count ... >= 2'
+```
+
+**MVP-спрощення (свідоме, не вигадане "за замовчуванням"):** ТЗ буквально каже "2 клієнти **поспіль**" — тобто два останні незалежні випадки поспіль. Реалізовано простіше: рахується сумарна кількість скарг на водія за весь час, без відстеження послідовності "поспіль". Якщо точна семантика критична для бізнесу (наприклад, щоб одна давня й одна нова скарга через рік не блокували водія автоматично) — потрібне додаткове рішення (rolling-вікно за часом або прапорець "розглянуто").
+
+**Відома межа (не вирішено зараз):** якщо адміністратор вручну розблокує водія (кнопка в Story 7, веб-панель), а показники (рейтинг/кількість скарг) ще не покращились — наступна ж подія (нова доставка або нова скарга) знову заблокує його автоматично. Потрібне окреме поле на кшталт "ручний override" з рішенням, як довго воно діє — свідомо не додано в цю ревізію.
+
+**Чого тут НЕМАЄ і чому:** захист від зовнішніх атак (підбір паролів до акаунтів, сканування неіснуючих URL, DDoS) свідомо не входить у цю бізнес-БД. Причина: обсяг таких подій під час реальної атаки може сягати тисяч записів за секунду — писати їх у ту саму базу, де живуть замовлення й доставки, ризиковано для продуктивності основного бізнес-навантаження. Рекомендовано інфраструктурний рівень (rate-limiting / WAF / Cloudflare / nginx) — рішення власника продукту від 2026-09-23.
+
+Технічно перевірено на живій PostgreSQL 16 + PostGIS: авто-блок через рейтинг (1 доставка з оцінкою 1.0 → `status='inactive'`), авто-блок через скарги (1 скарга → водій ще `available`; 2-га скарга → `status='inactive'`) — обидва сценарії відпрацювали коректно.
 
 ---
 
@@ -1377,7 +1433,7 @@ psql -U postgres -d smartlog_db -f 001_smartlog_core_mvp_marketplace_schema.sql
 19. staging_costs
 ```
 
-> Файл `001_smartlog_core_mvp_marketplace_schema.sql` є **єдиним актуальним скриптом створення бази даних** і повністю замінює `01_smartlog_core_mvp_marketplace_schema.sql`. Усі зміни, що раніше постачались окремим ALTER-патчем, тепер вбудовані напряму в `CREATE TABLE` — на новій, порожній базі достатньо виконати один цей файл, щоб одразу отримати фінальну структуру без застосування додаткових патчів.
+> Файл `01_smartlog_core_mvp_marketplace_schema.sql` є **єдиним актуальним скриптом створення бази даних** і повністю замінює `01_smartlog_core_mvp_marketplace_schema.sql`. Усі зміни, що раніше постачались окремим ALTER-патчем, тепер вбудовані напряму в `CREATE TABLE` — на новій, порожній базі достатньо виконати один цей файл, щоб одразу отримати фінальну структуру без застосування додаткових патчів.
 
 ---
 
@@ -1420,7 +1476,7 @@ Application layer відповідає за API, authentication/authorization, U
 
 ## 21. Підсумок
 
-`001_smartlog_core_mvp_marketplace_schema.sql` формує ядро SmartLog Europe навколо п'яти основних доменів:
+`01_smartlog_core_mvp_marketplace_schema.sql` формує ядро SmartLog Europe навколо п'яти основних доменів:
 
 1. **Marketplace** — `clients` (з журналом верифікації), `orders`, matching.
 2. **Fleet & Drivers** — `drivers`, `vehicles` (з юридичним власником `owner_client_id`).
@@ -1439,7 +1495,7 @@ Application layer відповідає за API, authentication/authorization, U
 Цей документ є технічною документацією до конкретного SQL-файлу:
 
 ```text
-001_smartlog_core_mvp_marketplace_schema.sql
+01_smartlog_core_mvp_marketplace_schema.sql
 ```
 
 Цей файл повністю замінює собою попередню версію `01_smartlog_core_mvp_marketplace_schema.sql`.

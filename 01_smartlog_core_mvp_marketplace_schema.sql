@@ -3,21 +3,6 @@
 -- Target Database: PostgreSQL 14+ with PostGIS Extension
 -- Domain: Marketplace Matching, Fleet, PostGIS Routes & Tracking,
 --         EU Multi-Country Compliance, Costs (Freelance/SMB) & Live Analytics
---
--- ЦЕЙ ФАЙЛ Є ЄДИНИМ АКТУАЛЬНИМ СКРИПТОМ СТВОРЕННЯ БАЗИ ДАНИХ.
--- Він повністю замінює собою 01_smartlog_core_mvp_marketplace_schema.sql:
--- усі зміни, які раніше постачались окремим ALTER-патчем, тепер вбудовані
--- напряму в CREATE TABLE (щоб на новій, порожній базі можна було виконати
--- ОДИН файл і одразу отримати фінальну структуру без застосування патчів).
---   [2026-09-16] vehicles: додано прямий зв'язок з юридичним власником —
---                          owner_client_id (FK -> clients) + індекс
---   [2026-09-16] orders:   client_name — перевірено й підтверджено, що такої
---                          колонки в канонічній схемі ніколи не було
---                          (зайва колонка існувала лише в тестовому Excel-файлі,
---                          там і виправлена; DDL тут ні до чого)
---   [2026-09-16] orders:   додано тригер узгодженості adr_required <-> drivers.has_adr
---                          (trg_validate_order_adr_compliance), за тим самим
---                          принципом, що й вже наявний trg_validate_order_executor
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -54,9 +39,14 @@ CREATE TYPE driver_status_enum AS ENUM (
 CREATE TYPE order_status_enum AS ENUM (
     'draft',               -- Order draft created by customer
     'published',           -- Listed on the marketplace exchange
-    'confirmed',           -- Matched & mutually confirmed
+    'confirmed',           -- Matched & mutually confirmed (== PM's "ASSIGNED")
     'in_transit',          -- Cargo picked up, in transit
-    'delivered',           -- Reached destination, e-POD uploaded
+    'delivered',           -- Driver marked as delivered (e-POD uploaded)
+    -- [2026-09-23] PM spec: окремий крок "Затверджено" бухгалтером/замовником
+    -- ПІСЛЯ delivered, перед виставленням рахунку. Названо 'closed', а не
+    -- 'confirmed' — те ім'я вже зайняте станом підтвердження matching-у вище,
+    -- і повторне використання створило б плутанину в аналітиці.
+    'closed',               -- Customer/accountant confirmed, invoice-ready
     'cancelled'            -- Order cancelled
 );
 
@@ -263,7 +253,7 @@ CREATE TABLE vehicles (
     -- що показує лише ПОТОЧНЕ ЗАКРІПЛЕННЯ водія, а не юридичну власність,
     -- і не працює для авто зовнішніх carrier_company, які взагалі не
     -- реєструють власних водіїв у drivers.
-    owner_client_id             VARCHAR(32) REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    owner_client_id              VARCHAR(32) REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE SET NULL,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -271,7 +261,7 @@ CREATE TABLE vehicles (
 -- 3.3. Drivers & Self-Employed Couriers (drivers)
 CREATE TABLE drivers (
     driver_id                   VARCHAR(32) PRIMARY KEY,                 -- DR-####
-    linked_client_id            VARCHAR(32) REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    linked_client_id            VARCHAR(32) NOT NULL REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     driver_type                 driver_type_enum NOT NULL DEFAULT 'self_employed',
     full_name                   VARCHAR(100) NOT NULL,
     phone_number                VARCHAR(30) NOT NULL,
@@ -286,6 +276,11 @@ CREATE TABLE drivers (
     total_reviews_count         INTEGER NOT NULL DEFAULT 0 CHECK (total_reviews_count >= 0),
     service_compliance_rate     NUMERIC(5,2) NOT NULL DEFAULT 100.00 CHECK (service_compliance_rate BETWEEN 0.00 AND 100.00),
     status                      driver_status_enum NOT NULL DEFAULT 'available',
+    -- [2026-09-23] Аудит авто-блокування (PM spec §6.2 "Саморегуляція біржі"):
+    -- заповнюються тригером fn_evaluate_driver_auto_block, коли status -> 'inactive'
+    -- автоматично через низький рейтинг або скарги на шахрайство.
+    blocked_at                  TIMESTAMPTZ,
+    blocked_reason               TEXT,
     default_vehicle_id          VARCHAR(32) REFERENCES vehicles(vehicle_id) ON UPDATE CASCADE ON DELETE SET NULL,
     is_verified                 BOOLEAN NOT NULL DEFAULT FALSE,
     is_test                     BOOLEAN NOT NULL DEFAULT FALSE,
@@ -306,7 +301,13 @@ CREATE TABLE drivers (
 CREATE TABLE routes (
     route_id             VARCHAR(32) PRIMARY KEY,                        -- RT-#####
     route_name           VARCHAR(150),                                   -- e.g. 'München -> Nürnberg via A9'
-    planned_geometry     GEOMETRY(LineString, 4326) NOT NULL,            -- Planned spatial line (WGS 84)
+    -- [2026-09-23] NULL дозволено: MVP-логіка PM не малює реальний маршрут
+    -- на мапі ("не малюємо складні карти з машинками") — бекенду достатньо
+    -- писати planned_distance_km (введена вручну/оцінена по прямій) і точки
+    -- delivery_track_points при натисканні кнопок водієм. Геометрія
+    -- заповнюється пізніше, коли з'явиться модуль побудови маршруту.
+    -- Функція is_route_deviated() (розділ 6.2) вже коректно обробляє NULL.
+    planned_geometry     GEOMETRY(LineString, 4326),                    -- Planned spatial line (WGS 84); NULL до впровадження route-планування
     planned_distance_km  NUMERIC(8,2) NOT NULL CHECK (planned_distance_km > 0),
     origin_country       CHAR(2) REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
     destination_country  CHAR(2) REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
@@ -352,6 +353,12 @@ CREATE TABLE orders (
     carrier_confirmed_at          TIMESTAMPTZ,
     match_status                  match_status_enum NOT NULL DEFAULT 'pending',
 
+    -- [2026-09-23] Журнал фінального підтвердження (status='closed'), окремо
+    -- від shipper/carrier_confirmed вище (ті — про підтвердження виконавця
+    -- ДО рейсу, ці — про приймання результату ПІСЛЯ delivered).
+    closed_by                     VARCHAR(150),                            -- Email/ID замовника чи бухгалтера, що затвердив
+    closed_at                     TIMESTAMPTZ,
+
     is_test                       BOOLEAN NOT NULL DEFAULT FALSE,
     created_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -362,7 +369,15 @@ CREATE TABLE orders (
     ),
     CONSTRAINT chk_reverse_charge_zero_vat CHECK (
         is_reverse_charge = FALSE OR vat_rate_pct = 0.00
+    ),
+    -- [2026-09-23] Узгодженість журналу закриття: обидва поля або порожні
+    -- разом, або заповнені разом — той самий патерн, що й chk_client_verification_log.
+    CONSTRAINT chk_order_closed_log CHECK (
+        (status <> 'closed' AND closed_by IS NULL AND closed_at IS NULL) OR
+        (status = 'closed'  AND closed_by IS NOT NULL AND closed_at IS NOT NULL)
     )
+    -- Примітка: колонки client_name тут НІКОЛИ не було — перевірено 2026-09-16.
+    -- Ім'я клієнта завжди отримується через JOIN clients ON orders.client_id = clients.client_id.
 );
 
 -- 3.6. Physical Deliveries Execution (deliveries)
@@ -459,6 +474,26 @@ CREATE TABLE costs (
         )
     )
 );
+
+-- 3.10. [2026-09-23] Fraud/Trust Complaints (fraud_reports) — PM spec §6.2
+-- "Саморегуляція біржі": клієнт натискає "Повідомити про шахрайство" на
+-- водієві. НЕ для скарг на замовників і НЕ для захисту від зовнішніх атак
+-- (підбір паролів, DDoS, сканування) — це інфраструктурне питання, свідомо
+-- залишене поза цією бізнес-БД (рішення власника продукту 2026-09-23).
+-- MVP-спрощення: рахуємо СУМАРНУ кількість скарг на водія, а не "2 поспіль",
+-- як буквально написано в ТЗ PM — послідовність замовлень тут не
+-- відстежується окремо, щоб не ускладнювати. Якщо точна семантика
+-- "поспіль" критична — дай знати, доробимо.
+CREATE TABLE fraud_reports (
+    report_id           VARCHAR(32) PRIMARY KEY,                        -- FR-YYYY-######
+    reported_driver_id  VARCHAR(32) NOT NULL REFERENCES drivers(driver_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    reporter_client_id  VARCHAR(32) NOT NULL REFERENCES clients(client_id) ON UPDATE CASCADE,
+    order_id             VARCHAR(32) REFERENCES orders(order_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    reason               TEXT NOT NULL,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_fraud_reports_driver ON fraud_reports(reported_driver_id);
 
 -- ----------------------------------------------------------------------------
 -- 4. INDEXES & SPATIAL ACCELERATION
@@ -632,7 +667,59 @@ CREATE TRIGGER trg_before_order_adr_check
     BEFORE INSERT OR UPDATE OF executor_type, executor_id, adr_required ON orders
     FOR EACH ROW EXECUTE FUNCTION trg_validate_order_adr_compliance();
 
--- 5.6. Real-Time WebSocket Push Notifications (PostgreSQL NOTIFY)
+-- 5.6. [2026-09-23, ЗАМІНЮЄ РІШЕННЯ ВІД 2026-09-20] Validate driver_type <-> linked_client_id Type Consistency
+-- Business rule (джерело: технічне завдання Product Manager, "Logistik.docx",
+-- розділ 7.1/9): найманого водія в системі СТВОРЮЄ власник фірми через свій
+-- кабінет (кнопка "+ Додати водія" -> система сама шле SMS з посиланням і
+-- тимчасовим PIN для входу). Окремої форми самостійної реєстрації для
+-- найманого водія в продукті НЕМАЄ — на /register лише 3 ролі: замовник,
+-- приватний водій (self_employed), фірма.
+-- Тому linked_client_id ЗАВЖДИ відомий у момент створення запису driver і
+-- ЗАВЖДИ обов'язковий (NOT NULL на рівні колонки, див. вище):
+--   driver_type = 'self_employed'    -> clients.client_type = 'solo_carrier'
+--   driver_type = 'company_employee' -> clients.client_type = 'company'
+-- Це скасовує попередній дозвіл на тимчасовий linked_client_id = NULL для
+-- company_employee (рішення 2026-09-20) і, як наслідок, знімає потребу в
+-- окремому модулі запитів на доступ (Design_App_Users_Access_Control...) —
+-- той модуль лишається в Project Knowledge як задокументована, але
+-- відхилена альтернатива.
+CREATE OR REPLACE FUNCTION trg_validate_driver_linked_client() RETURNS TRIGGER AS $$
+DECLARE
+    v_client_type client_type_enum;
+BEGIN
+    -- linked_client_id тепер NOT NULL на рівні колонки, але лишаємо явну
+    -- перевірку в тригері як другий рубіж захисту (defense in depth) —
+    -- на випадок майбутньої зміни схеми, що послабить NOT NULL.
+    IF NEW.linked_client_id IS NULL THEN
+        RAISE EXCEPTION 'driver % must have linked_client_id set at creation time (owner-created record, PM spec)', NEW.driver_id;
+    END IF;
+
+    SELECT client_type INTO v_client_type FROM clients WHERE client_id = NEW.linked_client_id;
+
+    IF v_client_type IS NULL THEN
+        RAISE EXCEPTION 'linked_client_id % not found in clients', NEW.linked_client_id;
+    END IF;
+
+    IF NEW.driver_type = 'self_employed' AND v_client_type <> 'solo_carrier' THEN
+        RAISE EXCEPTION 'self_employed driver % must link to a client with client_type=solo_carrier, got % (client %)',
+            NEW.driver_id, v_client_type, NEW.linked_client_id;
+    END IF;
+
+    IF NEW.driver_type = 'company_employee' AND v_client_type <> 'company' THEN
+        RAISE EXCEPTION 'company_employee driver % must link to a client with client_type=company, got % (client %)',
+            NEW.driver_id, v_client_type, NEW.linked_client_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_before_driver_linked_client_check ON drivers;
+CREATE TRIGGER trg_before_driver_linked_client_check
+    BEFORE INSERT OR UPDATE OF driver_type, linked_client_id ON drivers
+    FOR EACH ROW EXECUTE FUNCTION trg_validate_driver_linked_client();
+
+-- 5.7. Real-Time WebSocket Push Notifications (PostgreSQL NOTIFY)
 CREATE OR REPLACE FUNCTION trg_notify_delivery_status_change() RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') OR (NEW.delivery_status IS DISTINCT FROM OLD.delivery_status) THEN
@@ -862,6 +949,10 @@ BEGIN
         updated_at = CURRENT_TIMESTAMP
     WHERE driver_id = v_driver_id;
 
+    -- 5. [2026-09-23] Перевірка порогу авто-блокування (PM spec §6.2) одразу
+    -- після оновлення рейтингу — див. 8.1 нижче.
+    PERFORM fn_evaluate_driver_auto_block(v_driver_id);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -871,6 +962,58 @@ CREATE TRIGGER trg_after_delivery_update
     AFTER INSERT OR UPDATE OF delivery_status, customer_rating_stars, is_driver_liable, incident_type, proof_of_delivery_url
     ON deliveries
     FOR EACH ROW EXECUTE FUNCTION trg_update_driver_ratings();
+
+-- 8.1. [2026-09-23] No-Admin Trust Engine: Auto-Block on Low Rating or Fraud
+-- Reports (PM spec §6.2 "Саморегуляція біржі"). Спрацьовує з двох джерел:
+--   a) trg_update_driver_ratings вище — щоразу після перерахунку рейтингу;
+--   b) trg_after_fraud_report_insert нижче — щоразу при новій скарзі.
+-- Пороги (3.20 зірки, 2 скарги) захардкоджені в MVP; якщо знадобиться їх
+-- міняти без релізу — винести в окрему конфігураційну таблицю пізніше.
+-- ВІДОМЕ ОБМЕЖЕННЯ: якщо адміністратор вручну розблокує водія (Story 7),
+-- а показники (рейтинг/кількість скарг) ще не покращились — наступна ж
+-- подія знову заблокує його автоматично. Свідомо не вирішую це зараз
+-- (потребує окремого поля "manual override" і рішення, як довго воно діє).
+CREATE OR REPLACE FUNCTION fn_evaluate_driver_auto_block(p_driver_id VARCHAR) RETURNS VOID AS $$
+DECLARE
+    v_rating       NUMERIC(3,2);
+    v_report_count INTEGER;
+    v_reason       TEXT := NULL;
+BEGIN
+    SELECT avg_customer_rating INTO v_rating
+    FROM drivers WHERE driver_id = p_driver_id AND status <> 'inactive';
+
+    IF NOT FOUND THEN
+        RETURN;  -- вже неактивний (заблокований) або запису не існує
+    END IF;
+
+    SELECT COUNT(*) INTO v_report_count
+    FROM fraud_reports WHERE reported_driver_id = p_driver_id;
+
+    IF v_rating < 3.20 THEN
+        v_reason := 'auto_block: avg_customer_rating ' || v_rating || ' < 3.20';
+    ELSIF v_report_count >= 2 THEN
+        v_reason := 'auto_block: fraud_reports_count ' || v_report_count || ' >= 2';
+    END IF;
+
+    IF v_reason IS NOT NULL THEN
+        UPDATE drivers
+        SET status = 'inactive', blocked_at = CURRENT_TIMESTAMP, blocked_reason = v_reason
+        WHERE driver_id = p_driver_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION trg_fraud_report_autoblock() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM fn_evaluate_driver_auto_block(NEW.reported_driver_id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_after_fraud_report_insert ON fraud_reports;
+CREATE TRIGGER trg_after_fraud_report_insert
+    AFTER INSERT ON fraud_reports
+    FOR EACH ROW EXECUTE FUNCTION trg_fraud_report_autoblock();
 
 -- ----------------------------------------------------------------------------
 -- 9. БУФЕРНА ТАБЛИЦЯ STAGING (МАСОВИЙ ІМПОРТ З CSV)

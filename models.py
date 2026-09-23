@@ -38,6 +38,10 @@ class OrderStatus(models.TextChoices):
     CONFIRMED = 'confirmed', 'Matched & Mutually Confirmed'
     IN_TRANSIT = 'in_transit', 'Cargo Picked Up, in Transit'
     DELIVERED = 'delivered', 'Reached Destination, e-POD Uploaded'
+    # [2026-09-23] PM spec: клієнт/бухгалтер підтвердив після 'delivered' ->
+    # готово до інвойсу. Не названо 'confirmed' — те ім'я вже зайняте вище
+    # (matching-підтвердження, інший сенс).
+    CLOSED = 'closed', 'Customer/Accountant Confirmed, Invoice-Ready'
     CANCELLED = 'cancelled', 'Order Cancelled'
 
 
@@ -310,11 +314,11 @@ class Driver(models.Model):
     driver_id = models.CharField(max_length=32, primary_key=True, help_text="DR-####")
     linked_client = models.ForeignKey(
         Client,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.RESTRICT,
         db_column='linked_client_id'
-    )
+    )  # [2026-09-23] Обов'язковий для обох driver_type — власник створює водія
+       # напряму (ТЗ PM), тож client вже відомий у момент створення. Було
+       # SET_NULL/null=True/blank=True до 2026-09-20/23, див. коментар §5.6 нижче.
     driver_type = models.CharField(max_length=20, choices=DriverType.choices, default=DriverType.SELF_EMPLOYED)
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=30)
@@ -339,6 +343,11 @@ class Driver(models.Model):
         validators=[MinValueValidator(0.00), MaxValueValidator(100.00)]
     )
     status = models.CharField(max_length=20, choices=DriverStatus.choices, default=DriverStatus.AVAILABLE)
+    # [2026-09-23] Аудит авто-блокування (fn_evaluate_driver_auto_block, §8.8):
+    # заповнюється тригером БД, коли status -> 'inactive' автоматично через
+    # низький avg_customer_rating (<3.20) або кількість fraud_reports (>=2).
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_reason = models.TextField(null=True, blank=True)
     default_vehicle = models.ForeignKey(
         Vehicle,
         on_delete=models.SET_NULL,
@@ -393,31 +402,51 @@ class Driver(models.Model):
     # у логіці Django-сервісного шару (clean()/save() або serializer),
     # інакше помилка виникне лише при фактичному INSERT/UPDATE в БД:
     #
-    #   trg_validate_driver_linked_client (§5.6, додано 2026-09-20):
-    #       linked_client повинен посилатись на Client правильного типу
-    #       відповідно до driver_type:
-    #         driver_type='self_employed'    -> linked_client.client_type
-    #                                            повинен бути 'solo_carrier'
-    #                                            (linked_client обов'язковий,
-    #                                            NULL не допускається)
-    #         driver_type='company_employee' -> linked_client, якщо заданий,
-    #                                            повинен бути 'company';
-    #                                            NULL тимчасово допускається
-    #                                            (водій зареєстрований, ще
-    #                                            не підтверджений власником
-    #                                            компанії)
+    #   trg_validate_driver_linked_client (§5.6, оновлено 2026-09-23,
+    #   замінює версію від 2026-09-20):
+    #       linked_client ЗАВЖДИ обов'язковий (NULL не допускається для
+    #       жодного driver_type — див. джерело зміни нижче) і повинен
+    #       посилатись на Client правильного типу:
+    #         driver_type='self_employed'    -> linked_client.client_type = 'solo_carrier'
+    #         driver_type='company_employee' -> linked_client.client_type = 'company'
+    #
+    #   Джерело зміни: ТЗ Product Manager (Logistik.docx, §7.1/9) — найманого
+    #   водія створює власник фірми напряму через кабінет ("+ Додати водія"),
+    #   система сама шле SMS+PIN. Окремої самореєстрації для найманого
+    #   водія в продукті немає, тож client відомий одразу при створенні
+    #   запису Driver. Попередній "перехідний NULL-стан" (водій сам
+    #   реєструється, власник підтверджує пізніше) більше не застосовний.
     #
     #   Це також знімає потребу в окремому FK на Client в auth-шарі
     #   (DriverProfile) — доступ до білінгових даних самозайнятого водія
     #   йде через єдиний ланцюжок Driver.linked_client -> Client, який
     #   тепер гарантовано веде на клієнта правильного типу.
+    #
+    #   Так само дублювання цієї перевірки у clean()/save() лишається
+    #   актуальним (тригер БД не спрацьовує при валідації форми).
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # fn_evaluate_driver_auto_block / trg_after_fraud_report_insert (§8.8,
+    # додано 2026-09-23): DB-рівнева авто-логіка, НЕ виражена як Django
+    # CheckConstraint (звіряє дані іншої таблиці, fraud_reports, і рахунок
+    # деривативів по deliveries). status -> 'inactive' автоматично, коли
+    # avg_customer_rating < 3.20 АБО кількість FraudReport на водія >= 2.
+    # Бекенду варто дублювати хоча б м'яке попередження в UI власника
+    # компанії ("рейтинг водія близький до порогу блокування"), але
+    # ІМПЕРАТИВНЕ блокування виконує сама БД — дублювати в Python не
+    # обов'язково (на відміну від §5.6 вище, де це форма/UX-перевірка,
+    # тут це саме бізнес-правило "не довіряй бекенду").
     # ------------------------------------------------------------------
 
 
 class Route(models.Model):
     route_id = models.CharField(max_length=32, primary_key=True, help_text="RT-#####")
     route_name = models.CharField(max_length=150, null=True, blank=True)
-    planned_geometry = models.LineStringField(srid=4326)
+    # [2026-09-23] NULL дозволено: MVP-логіка ТЗ PM не малює реальний
+    # маршрут на мапі — досить planned_distance_km і точок delivery_track_points
+    # при натисканні кнопок водієм. Було LineStringField() без null=True.
+    planned_geometry = models.LineStringField(srid=4326, null=True, blank=True)
     planned_distance_km = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0.01)])
     origin_country = models.ForeignKey(
         SupportedCountry,
@@ -489,6 +518,12 @@ class Order(models.Model):
     carrier_confirmed_at = models.DateTimeField(null=True, blank=True)
     match_status = models.CharField(max_length=20, choices=MatchStatus.choices, default=MatchStatus.PENDING)
 
+    # [2026-09-23] Журнал фінального підтвердження (status=CLOSED), окремо
+    # від shipper/carrier_confirmed вище (ті — про виконавця ДО рейсу, ці —
+    # про приймання результату ПІСЛЯ delivered, перед виставленням рахунку).
+    closed_by = models.CharField(max_length=150, null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
     is_test = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
@@ -517,6 +552,15 @@ class Order(models.Model):
             models.CheckConstraint(
                 check=models.Q(is_reverse_charge=False) | models.Q(vat_rate_pct=0.00),
                 name='chk_reverse_charge_zero_vat'
+            ),
+            # [2026-09-23] Той самий патерн журналу, що й chk_client_verification_log:
+            # closed_by/closed_at заповнені разом зі status=CLOSED, і порожні в будь-якому іншому.
+            models.CheckConstraint(
+                check=(
+                    (~models.Q(status='closed') & models.Q(closed_by__isnull=True) & models.Q(closed_at__isnull=True)) |
+                    (models.Q(status='closed') & models.Q(closed_by__isnull=False) & models.Q(closed_at__isnull=False))
+                ),
+                name='chk_order_closed_log'
             )
         ]
 
@@ -678,3 +722,42 @@ class Cost(models.Model):
 
     def __str__(self):
         return f"{self.cost_id} - {self.cost_type} ({self.cost_amount_eur} EUR)"
+
+
+class FraudReport(models.Model):
+    """
+    [2026-09-23] Скарги клієнтів на водіїв ("Повідомити про шахрайство",
+    ТЗ PM §6.2 "Саморегуляція біржі"). Тільки клієнт -> водій; скарг на
+    замовників тут немає, як і захисту від зовнішніх атак (підбір паролів,
+    DDoS, сканування) — те свідомо залишено поза цією бізнес-БД (рішення
+    власника продукту 2026-09-23), рекомендовано інфраструктурний рівень
+    (WAF / rate-limiting) на боці бекенду/DevOps.
+
+    DB-рівнева авто-логіка (§8.8 DATABASE_SCHEMA.md, НЕ виражена як Django
+    CheckConstraint — звіряє агреговані дані по цій же таблиці й по
+    deliveries): fn_evaluate_driver_auto_block переводить
+    Driver.status -> 'inactive', коли avg_customer_rating < 3.20 АБО
+    кількість FraudReport на водія >= 2. MVP-спрощення: рахується сумарна
+    кількість скарг, а не буквальне "2 поспіль" з ТЗ.
+    """
+    report_id = models.CharField(max_length=32, primary_key=True, help_text="FR-YYYY-######")
+    reported_driver = models.ForeignKey(
+        Driver, on_delete=models.CASCADE, related_name='fraud_reports', db_column='reported_driver_id'
+    )
+    reporter_client = models.ForeignKey(
+        Client, on_delete=models.CASCADE, related_name='fraud_reports_filed', db_column='reporter_client_id'
+    )
+    order = models.ForeignKey(
+        Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='fraud_reports', db_column='order_id'
+    )
+    reason = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'fraud_reports'
+        indexes = [
+            models.Index(fields=['reported_driver'], name='idx_fraud_reports_driver'),
+        ]
+
+    def __str__(self):
+        return f"{self.report_id} - driver {self.reported_driver_id}"
