@@ -1,8 +1,23 @@
 -- ============================================================================
--- SMARTLOG EUROPE: CONSOLIDATED CORE LOGISTICS PLATFORM SCHEMA
+-- SMARTLOG EUROPE: CONSOLIDATED CORE LOGISTICS PLATFORM SCHEMA (v2)
 -- Target Database: PostgreSQL 14+ with PostGIS Extension
 -- Domain: Marketplace Matching, Fleet, PostGIS Routes & Tracking,
 --         EU Multi-Country Compliance, Costs (Freelance/SMB) & Live Analytics
+--
+-- ЦЕЙ ФАЙЛ Є ЄДИНИМ АКТУАЛЬНИМ СКРИПТОМ СТВОРЕННЯ БАЗИ ДАНИХ.
+-- Він повністю замінює собою 01_smartlog_core_mvp_marketplace_schema.sql:
+-- усі зміни, які раніше постачались окремим ALTER-патчем, тепер вбудовані
+-- напряму в CREATE TABLE (щоб на новій, порожній базі можна було виконати
+-- ОДИН файл і одразу отримати фінальну структуру без застосування патчів).
+--   [2026-09-16] vehicles: додано прямий зв'язок з юридичним власником —
+--                          owner_client_id (FK -> clients) + індекс
+--   [2026-09-16] orders:   client_name — перевірено й підтверджено, що такої
+--                          колонки в канонічній схемі ніколи не було
+--                          (зайва колонка існувала лише в тестовому Excel-файлі,
+--                          там і виправлена; DDL тут ні до чого)
+--   [2026-09-16] orders:   додано тригер узгодженості adr_required <-> drivers.has_adr
+--                          (trg_validate_order_adr_compliance), за тим самим
+--                          принципом, що й вже наявний trg_validate_order_executor
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -208,12 +223,22 @@ CREATE TABLE clients (
     billing_country     CHAR(2) NOT NULL REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
     is_verified         BOOLEAN NOT NULL DEFAULT FALSE,
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+    -- [2026-09-16] Журнал верифікації: хто і коли фактично підтвердив клієнта
+    -- (раніше було відсутнє — is_verified був "голим" прапорцем без аудиту).
+    verified_by         VARCHAR(150),                                    -- Email/ID співробітника або системи, що верифікувала
+    verified_at          TIMESTAMPTZ,                                     -- Дата й час фактичної верифікації
     created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_company_tax_compliance CHECK (
         (client_type = 'company' AND (vat_id IS NOT NULL OR tax_number IS NOT NULL)) OR
         (client_type IN ('individual', 'solo_carrier'))
+    ),
+    -- [2026-09-16] Узгодженість журналу верифікації: обидва поля або порожні
+    -- разом (ще не верифікований), або заповнені разом (верифікований).
+    CONSTRAINT chk_client_verification_log CHECK (
+        (is_verified = FALSE AND verified_by IS NULL AND verified_at IS NULL) OR
+        (is_verified = TRUE  AND verified_by IS NOT NULL AND verified_at IS NOT NULL)
     )
 );
 
@@ -230,6 +255,15 @@ CREATE TABLE vehicles (
     tuv_inspection_expiry_date  DATE NOT NULL,                           -- Mandatory inspection (HU/AU)
     is_active                   BOOLEAN NOT NULL DEFAULT TRUE,
     is_test                     BOOLEAN NOT NULL DEFAULT FALSE,
+    -- [2026-09-16] Прямий зв'язок з юридичним власником/оператором ТЗ:
+    -- компанія-перевізник (client_type='company') або сам самозайнятий
+    -- перевізник як власна юр. особа (client_type='solo_carrier'). Раніше
+    -- зв'язок "чиє це авто" можна було встановити лише непрямим ланцюжком
+    -- vehicles.vehicle_id <- drivers.default_vehicle_id -> drivers.linked_client_id,
+    -- що показує лише ПОТОЧНЕ ЗАКРІПЛЕННЯ водія, а не юридичну власність,
+    -- і не працює для авто зовнішніх carrier_company, які взагалі не
+    -- реєструють власних водіїв у drivers.
+    owner_client_id             VARCHAR(32) REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE SET NULL,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -293,34 +327,34 @@ CREATE TABLE orders (
     origin_address              VARCHAR(255) NOT NULL,
     origin_city                 VARCHAR(100) NOT NULL,
     origin_postal_code          VARCHAR(10) NOT NULL,
-    origin_country              CHAR(2) NOT NULL REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
-    origin_location             GEOMETRY(Point, 4326),                   -- Pickup GPS coordinates
-    destination_address         VARCHAR(255) NOT NULL,
-    destination_city            VARCHAR(100) NOT NULL,
-    destination_postal_code     VARCHAR(10) NOT NULL,
-    destination_country         CHAR(2) NOT NULL REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
-    destination_location        GEOMETRY(Point, 4326),                   -- Delivery GPS coordinates
+    origin_country               CHAR(2) NOT NULL REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
+    origin_location              GEOMETRY(Point, 4326),                   -- Pickup GPS coordinates
+    destination_address          VARCHAR(255) NOT NULL,
+    destination_city             VARCHAR(100) NOT NULL,
+    destination_postal_code      VARCHAR(10) NOT NULL,
+    destination_country          CHAR(2) NOT NULL REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
+    destination_location         GEOMETRY(Point, 4326),                   -- Delivery GPS coordinates
 
-    pickup_at                   TIMESTAMPTZ NOT NULL,
-    planned_delivery_at         TIMESTAMPTZ NOT NULL,
-    cargo_type                  cargo_type_enum NOT NULL,
-    cargo_weight_kg             NUMERIC(10,2) NOT NULL CHECK (cargo_weight_kg > 0),
-    cargo_units                 INTEGER NOT NULL CHECK (cargo_units >= 1),
-    adr_required                BOOLEAN NOT NULL DEFAULT FALSE,
+    pickup_at                    TIMESTAMPTZ NOT NULL,
+    planned_delivery_at          TIMESTAMPTZ NOT NULL,
+    cargo_type                   cargo_type_enum NOT NULL,
+    cargo_weight_kg               NUMERIC(10,2) NOT NULL CHECK (cargo_weight_kg > 0),
+    cargo_units                   INTEGER NOT NULL CHECK (cargo_units >= 1),
+    adr_required                  BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Two-Sided Matching & Dispatch-Free Engine
-    executor_type               executor_type_enum,
-    executor_id                 VARCHAR(32),                             -- DR-#### or C-###
-    executor_name               VARCHAR(255),
-    shipper_confirmed           BOOLEAN NOT NULL DEFAULT FALSE,
-    shipper_confirmed_at        TIMESTAMPTZ,
-    carrier_confirmed           BOOLEAN NOT NULL DEFAULT FALSE,
-    carrier_confirmed_at        TIMESTAMPTZ,
-    match_status                match_status_enum NOT NULL DEFAULT 'pending',
+    executor_type                 executor_type_enum,
+    executor_id                   VARCHAR(32),                             -- DR-#### or C-###
+    executor_name                 VARCHAR(255),
+    shipper_confirmed             BOOLEAN NOT NULL DEFAULT FALSE,
+    shipper_confirmed_at          TIMESTAMPTZ,
+    carrier_confirmed             BOOLEAN NOT NULL DEFAULT FALSE,
+    carrier_confirmed_at          TIMESTAMPTZ,
+    match_status                  match_status_enum NOT NULL DEFAULT 'pending',
 
-    is_test                     BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_test                       BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_order_time_window CHECK (planned_delivery_at >= pickup_at),
     CONSTRAINT chk_order_match_consistency CHECK (
@@ -378,17 +412,17 @@ CREATE TABLE shipment_documents (
     delivery_id                 VARCHAR(32) NOT NULL REFERENCES deliveries(delivery_id) ON UPDATE CASCADE ON DELETE CASCADE,
     document_type               document_type_enum NOT NULL,
     document_url                TEXT NOT NULL,                           -- S3 Pre-signed URL or CDN public path
-    s3_object_key               VARCHAR(512),                            -- Key in S3 bucket (e.g., 'documents/2026/cmr_DL101.pdf')
-    file_name                   VARCHAR(255) NOT NULL,                   -- Original filename (e.g., 'cmr_scan.pdf')
-    file_size_bytes             BIGINT,                                  -- File size in bytes for storage tracking
-    mime_type                   VARCHAR(100) NOT NULL DEFAULT 'application/pdf', -- 'application/pdf', 'image/jpeg'
-    verification_status         document_status_enum NOT NULL DEFAULT 'pending',
-    signed_by_name              VARCHAR(100),
-    signed_at                   TIMESTAMPTZ,
-    signature_geo_location      GEOMETRY(Point, 4326),                   -- e-POD signature coordinates
-    rejection_reason            TEXT,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    s3_object_key                VARCHAR(512),                            -- Key in S3 bucket (e.g., 'documents/2026/cmr_DL101.pdf')
+    file_name                    VARCHAR(255) NOT NULL,                   -- Original filename (e.g., 'cmr_scan.pdf')
+    file_size_bytes               BIGINT,                                  -- File size in bytes for storage tracking
+    mime_type                     VARCHAR(100) NOT NULL DEFAULT 'application/pdf', -- 'application/pdf', 'image/jpeg'
+    verification_status           document_status_enum NOT NULL DEFAULT 'pending',
+    signed_by_name                 VARCHAR(100),
+    signed_at                      TIMESTAMPTZ,
+    signature_geo_location         GEOMETRY(Point, 4326),                   -- e-POD signature coordinates
+    rejection_reason               TEXT,
+    created_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3.9. Operating & Vehicle Costs (costs)
@@ -431,6 +465,9 @@ CREATE TABLE costs (
 -- ----------------------------------------------------------------------------
 
 CREATE INDEX idx_clients_country_type ON clients(billing_country, client_type);
+
+-- [2026-09-16] Індекс для нового FK vehicles.owner_client_id (пошук усіх авто конкретного власника)
+CREATE INDEX idx_vehicles_owner_client_id ON vehicles(owner_client_id);
 
 CREATE INDEX idx_orders_client_id ON orders(client_id);
 CREATE INDEX idx_orders_status_date ON orders(status, order_date);
@@ -561,7 +598,41 @@ CREATE TRIGGER trg_before_order_executor_check
     BEFORE INSERT OR UPDATE OF executor_type, executor_id ON orders
     FOR EACH ROW EXECUTE FUNCTION trg_validate_order_executor();
 
--- 5.5. Real-Time WebSocket Push Notifications (PostgreSQL NOTIFY)
+-- 5.5. [2026-09-16] Validate ADR Compliance of Assigned fop_driver Executor
+-- Закриває прогалину: adr_required=TRUE на замовленні раніше ніяк не звірявся
+-- з drivers.has_adr виконавця на рівні БД. Побудовано за тим самим принципом,
+-- що й 5.4 (trg_validate_order_executor): перевірка спрацьовує ЛИШЕ для
+-- executor_type='fop_driver' — для 'carrier_company' перевірка НЕ виконується,
+-- бо платформа не реєструє водіїв/сертифікати зовнішніх компаній-перевізників
+-- (та сама архітектурна межа, що й у 5.4).
+CREATE OR REPLACE FUNCTION trg_validate_order_adr_compliance() RETURNS TRIGGER AS $$
+DECLARE
+    v_has_adr BOOLEAN;
+BEGIN
+    IF NEW.adr_required = TRUE AND NEW.executor_type = 'fop_driver' AND NEW.executor_id IS NOT NULL THEN
+        SELECT has_adr INTO v_has_adr FROM drivers WHERE driver_id = NEW.executor_id;
+
+        IF v_has_adr IS NULL THEN
+            -- Водія взагалі не знайдено — цю помилку вже ловить trg_validate_order_executor,
+            -- тут лише захисний дубль на випадок іншого порядку виконання тригерів.
+            RAISE EXCEPTION 'executor_id % not found in drivers (adr compliance check)', NEW.executor_id;
+        END IF;
+
+        IF NOT v_has_adr THEN
+            RAISE EXCEPTION 'Order % requires adr_required = TRUE, but driver % does not hold a valid ADR certificate (has_adr = FALSE)',
+                NEW.order_id, NEW.executor_id;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_before_order_adr_check ON orders;
+CREATE TRIGGER trg_before_order_adr_check
+    BEFORE INSERT OR UPDATE OF executor_type, executor_id, adr_required ON orders
+    FOR EACH ROW EXECUTE FUNCTION trg_validate_order_adr_compliance();
+
+-- 5.6. Real-Time WebSocket Push Notifications (PostgreSQL NOTIFY)
 CREATE OR REPLACE FUNCTION trg_notify_delivery_status_change() RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') OR (NEW.delivery_status IS DISTINCT FROM OLD.delivery_status) THEN
@@ -632,7 +703,7 @@ $$ LANGUAGE plpgsql STABLE;
 
 -- 7.1. Operational Deliveries & Distance Deviation Monitoring (Specs 05a / 05b)
 CREATE OR REPLACE VIEW v_deliveries_analytics AS
-SELECT 
+SELECT
     d.delivery_id,
     d.order_id,
     d.route_id,
@@ -648,7 +719,7 @@ SELECT
     d.actual_distance_km,
     (d.actual_distance_km - d.planned_distance_km) AS distance_deviation_km,
     ROUND(
-        ((d.actual_distance_km - d.planned_distance_km) / NULLIF(d.planned_distance_km, 0)) * 100, 
+        ((d.actual_distance_km - d.planned_distance_km) / NULLIF(d.planned_distance_km, 0)) * 100,
         2
     ) AS distance_deviation_pct,
     d.delay_minutes,
@@ -686,7 +757,7 @@ LEFT JOIN deliveries d ON d.order_id = o.order_id;
 
 -- 7.3. Solo Carrier Net Take-Home Earnings View (Spec 04a)
 CREATE OR REPLACE VIEW v_driver_net_income AS
-SELECT 
+SELECT
     c.driver_id,
     d.full_name,
     d.driver_type,
@@ -700,19 +771,19 @@ GROUP BY c.driver_id, d.full_name, d.driver_type;
 
 -- 7.4. Delivery Margin & Profitability P&L View
 CREATE OR REPLACE VIEW v_delivery_profitability AS
-SELECT 
+SELECT
     d.delivery_id,
     o.order_id,
     o.amount_eur AS gross_revenue_eur,
     COALESCE(SUM(c.cost_amount_eur) FILTER (WHERE c.is_private_expense = FALSE), 0.00) AS direct_operating_costs_eur,
     COALESCE(SUM(c.driver_payout_eur), 0.00) AS driver_reward_eur,
-    (o.amount_eur 
-        - COALESCE(SUM(c.cost_amount_eur) FILTER (WHERE c.is_private_expense = FALSE), 0.00) 
+    (o.amount_eur
+        - COALESCE(SUM(c.cost_amount_eur) FILTER (WHERE c.is_private_expense = FALSE), 0.00)
         - COALESCE(SUM(c.driver_payout_eur), 0.00)) AS net_gross_profit_eur,
     ROUND(
-        ((o.amount_eur 
-            - COALESCE(SUM(c.cost_amount_eur) FILTER (WHERE c.is_private_expense = FALSE), 0.00) 
-            - COALESCE(SUM(c.driver_payout_eur), 0.00)) / NULLIF(o.amount_eur, 0)) * 100, 
+        ((o.amount_eur
+            - COALESCE(SUM(c.cost_amount_eur) FILTER (WHERE c.is_private_expense = FALSE), 0.00)
+            - COALESCE(SUM(c.driver_payout_eur), 0.00)) / NULLIF(o.amount_eur, 0)) * 100,
         2
     ) AS gross_margin_pct
 FROM deliveries d
@@ -825,3 +896,13 @@ ALTER TABLE staging_costs ALTER COLUMN cost_id DROP NOT NULL;
 --         VALUES ('AT', 20.00, CURRENT_DATE);
 --         UPDATE supported_countries SET is_active = TRUE, activated_at = CURRENT_TIMESTAMP
 --         WHERE country_code = 'AT';
+-- 10.5. [2026-09-16] Відомі відкриті прогалини (не входять у цю ревізію,
+--       винесені на наступну ітерацію MVP):
+--       - vehicles.owner_client_id: для авто штатних водіїв (company_employee)
+--         немає client-запису, що представляв би саму операційну компанію-
+--         власника автопарку — потрібно завести такий запис у clients.
+--       - Відсутній довідник тарифів LKW-Maut (toll_rates) за euro_emission_class
+--         і gross_vehicle_weight_kg — потрібен для точного розрахунку дорожніх зборів.
+--       - drivers: немає DB-рівневої перевірки протермінованості driving_license_expiry_date,
+--         code_95_expiry_date, adr_expiry_date відносно поточної дати (лише
+--         перевірка парності полів через CHECK, не самих дат).

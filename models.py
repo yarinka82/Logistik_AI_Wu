@@ -1,7 +1,7 @@
 """
 SmartLog Europe: Core Logistics Data Models
 Django ORM implementation for PostgreSQL 14+ with PostGIS.
-Fully compliant with 01_smartlog_core_mvp_marketplace_schema.sql.
+Fully compliant with 001_smartlog_core_mvp_marketplace_schema.sql.
 """
 
 from django.contrib.gis.db import models
@@ -216,6 +216,17 @@ class Client(models.Model):
     )
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # [2026-09-16] Журнал верифікації: хто і коли фактично підтвердив клієнта.
+    # Раніше is_verified був "голим" прапорцем без аудиту — хто натиснув
+    # "верифікувати" і коли, встановити було неможливо.
+    verified_by = models.CharField(
+        max_length=150, null=True, blank=True,
+        help_text="Email/ID співробітника або системи, що верифікувала клієнта"
+    )
+    verified_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Дата й час фактичної верифікації"
+    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 
@@ -231,6 +242,17 @@ class Client(models.Model):
                     models.Q(client_type__in=['individual', 'solo_carrier'])
                 ),
                 name='chk_company_tax_compliance'
+            ),
+            # [2026-09-16] Узгодженість журналу верифікації: обидва поля або
+            # порожні разом (ще не верифікований), або заповнені разом
+            # (верифікований) — не можна мати is_verified=True без
+            # verified_by/verified_at, і навпаки.
+            models.CheckConstraint(
+                check=(
+                    (models.Q(is_verified=False) & models.Q(verified_by__isnull=True) & models.Q(verified_at__isnull=True)) |
+                    (models.Q(is_verified=True) & models.Q(verified_by__isnull=False) & models.Q(verified_at__isnull=False))
+                ),
+                name='chk_client_verification_log'
             )
         ]
 
@@ -250,11 +272,30 @@ class Vehicle(models.Model):
     tuv_inspection_expiry_date = models.DateField(help_text="Mandatory inspection HU/AU")
     is_active = models.BooleanField(default=True)
     is_test = models.BooleanField(default=False)
+    # [2026-09-16] Прямий зв'язок з юридичним власником/оператором ТЗ:
+    # компанія-перевізник (client_type='company') або сам самозайнятий
+    # перевізник як власна юр. особа (client_type='solo_carrier'). Раніше
+    # зв'язок "чиє це авто" можна було встановити лише непрямим ланцюжком
+    # Vehicle <- Driver.default_vehicle <- Driver.linked_client, що показує
+    # лише ПОТОЧНЕ ЗАКРІПЛЕННЯ водія, а не юридичну власність, і не працює
+    # для авто зовнішніх carrier_company, які взагалі не реєструють власних
+    # водіїв у drivers.
+    owner_client = models.ForeignKey(
+        Client,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='owner_client_id',
+        help_text="Юридичний власник/оператор транспортного засобу (clients.client_id)"
+    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'vehicles'
+        indexes = [
+            models.Index(fields=['owner_client'], name='idx_vehicles_owner_client_id'),
+        ]
         constraints = [
             models.CheckConstraint(check=models.Q(gross_vehicle_weight_kg__gt=0), name='chk_vehicle_gvw_positive'),
             models.CheckConstraint(check=models.Q(payload_capacity_kg__gt=0), name='chk_vehicle_payload_positive'),
@@ -343,6 +384,34 @@ class Driver(models.Model):
 
     def __str__(self):
         return f"{self.driver_id} - {self.full_name}"
+
+    # ------------------------------------------------------------------
+    # DB-рівневий тригер, що НЕ виражений як Django CheckConstraint, бо
+    # звіряє дані ІНШОЇ таблиці (clients) — стандартний CHECK constraint
+    # не має доступу до інших таблиць. Застосовується на рівні БД (001_
+    # smartlog_core_mvp_marketplace_schema.sql, §5.6) і має дублюватись
+    # у логіці Django-сервісного шару (clean()/save() або serializer),
+    # інакше помилка виникне лише при фактичному INSERT/UPDATE в БД:
+    #
+    #   trg_validate_driver_linked_client (§5.6, додано 2026-09-20):
+    #       linked_client повинен посилатись на Client правильного типу
+    #       відповідно до driver_type:
+    #         driver_type='self_employed'    -> linked_client.client_type
+    #                                            повинен бути 'solo_carrier'
+    #                                            (linked_client обов'язковий,
+    #                                            NULL не допускається)
+    #         driver_type='company_employee' -> linked_client, якщо заданий,
+    #                                            повинен бути 'company';
+    #                                            NULL тимчасово допускається
+    #                                            (водій зареєстрований, ще
+    #                                            не підтверджений власником
+    #                                            компанії)
+    #
+    #   Це також знімає потребу в окремому FK на Client в auth-шарі
+    #   (DriverProfile) — доступ до білінгових даних самозайнятого водія
+    #   йде через єдиний ланцюжок Driver.linked_client -> Client, який
+    #   тепер гарантовано веде на клієнта правильного типу.
+    # ------------------------------------------------------------------
 
 
 class Route(models.Model):
@@ -453,6 +522,24 @@ class Order(models.Model):
 
     def __str__(self):
         return f"{self.order_id} ({self.status})"
+
+    # ------------------------------------------------------------------
+    # DB-рівневі тригери, що НЕ виражені як Django CheckConstraint, бо
+    # звіряють дані ІНШОЇ таблиці (drivers) — стандартний Postgres/Django
+    # CHECK constraint не має доступу до інших таблиць, лише до полів
+    # свого рядка. Обидва застосовуються на рівні БД (001_smartlog_core_
+    # mvp_marketplace_schema.sql, §5.4-5.5) і мають дублюватись у логіці
+    # Django-сервісного шару (наприклад, у clean()/save() або у serializer),
+    # інакше помилка виникне лише при фактичному INSERT/UPDATE в БД:
+    #
+    #   trg_validate_order_executor (§5.4): якщо executor_type='fop_driver',
+    #       executor_id повинен існувати в drivers.
+    #   trg_validate_order_adr_compliance (§5.5, додано 2026-09-16): якщо
+    #       adr_required=True І executor_type='fop_driver', виконавець
+    #       повинен мати drivers.has_adr=True. Для executor_type=
+    #       'carrier_company' перевірка НЕ виконується (платформа не
+    #       реєструє водіїв/сертифікати зовнішніх компаній-перевізників).
+    # ------------------------------------------------------------------
 
 
 class Delivery(models.Model):

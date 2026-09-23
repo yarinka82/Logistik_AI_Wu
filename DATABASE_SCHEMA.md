@@ -1,7 +1,7 @@
 # SmartLog Europe — Database Schema Technical Documentation
 
 **File:** `DATABASE_SCHEMA.md`  
-**Source DDL:** `01_smartlog_core_mvp_marketplace_schema.sql`  
+**Source DDL:** `001_smartlog_core_mvp_marketplace_schema.sql`  
 **Target DB:** PostgreSQL 14+  
 **Extension:** PostGIS  
 **Schema type:** Core logistics / marketplace MVP  
@@ -9,16 +9,29 @@
 
 ---
 
+## 0. Історія змін документації
+
+| Дата | Зміна |
+|---|---|
+| 2026-09-16 | `clients`: додано журнал верифікації — `verified_by`, `verified_at` + `CONSTRAINT chk_client_verification_log`. |
+| 2026-09-16 | `vehicles`: додано прямий зв'язок з юридичним власником — `owner_client_id` (FK → `clients`) + індекс `idx_vehicles_owner_client_id`. |
+| 2026-09-16 | `orders`: додано тригер узгодженості `adr_required` ↔ `drivers.has_adr` — `trg_validate_order_adr_compliance` / `trg_before_order_adr_check`, за тим самим принципом, що й вже наявний `trg_validate_order_executor`. |
+| 2026-09-16 | Перевірено й підтверджено: колонки `orders.client_name` у канонічній схемі ніколи не було — вона існувала лише в тестовому Excel-файлі й там же видалена. DDL тут ні до чого. |
+| 2026-09-16 | SQL-файл консолідовано в один файл `001_smartlog_core_mvp_marketplace_schema.sql`, який повністю замінює `01_smartlog_core_mvp_marketplace_schema.sql`. Усі зміни, що раніше постачались окремим ALTER-патчем, тепер вбудовані напряму в `CREATE TABLE`. |
+| 2026-09-20 | `drivers`: додано тригер узгодженості `driver_type` ↔ `linked_client_id.client_type` — `trg_validate_driver_linked_client` / `trg_before_driver_linked_client_check`. `self_employed` водій зобов'язаний мати `linked_client_id` на `client_type='solo_carrier'`; `company_employee` — на `client_type='company'` (або тимчасово `NULL` до підтвердження власником компанії). |
+
+---
+
 ## 1. Призначення
 
-Цей документ описує фактичну структуру та логіку SQL-скрипту `01_smartlog_core_mvp_marketplace_schema.sql`.
+Цей документ описує фактичну структуру та логіку SQL-скрипту `001_smartlog_core_mvp_marketplace_schema.sql`.
 
 База даних **SmartLog Europe** призначена для ядра логістичної платформи з такими функціональними напрямами:
 
 - marketplace matching для прямих замовлень;
 - клієнти та контрагенти;
 - самозайняті водії та водії транспортних компаній;
-- автопарк і транспортні засоби;
+- автопарк і транспортні засоби, включно з юридичним власником ТЗ;
 - маршрути та геопросторові дані PostGIS;
 - фізичне виконання доставок;
 - GPS-телематика;
@@ -68,12 +81,16 @@ supported_countries
        │
        ├── clients
        │      │
-       │      └── orders
-       │              │
-       │              └── deliveries
-       │                       ├── delivery_track_points
-       │                       ├── shipment_documents
-       │                       └── costs
+       │      ├── orders
+       │      │      │
+       │      │      └── deliveries
+       │      │              ├── delivery_track_points
+       │      │              ├── shipment_documents
+       │      │              └── costs
+       │      │
+       │      ├── drivers (linked_client_id, nullable)
+       │      │
+       │      └── vehicles (owner_client_id, nullable)
        │
        └── routes
                 │
@@ -99,7 +116,8 @@ costs ──► deliveries
 | `supported_countries` | `routes` | 1:N через країни origin/destination |
 | `supported_countries` | `orders` | 1:N через origin/destination |
 | `clients` | `orders` | 1:N |
-| `clients` | `drivers` | 1:N, nullable |
+| `clients` | `drivers` | 1:N, nullable (`linked_client_id`) |
+| `clients` | `vehicles` | 1:N, nullable (`owner_client_id`) — **додано 2026-09-16** |
 | `vehicles` | `drivers` | 1:N як `default_vehicle_id`, nullable |
 | `orders` | `deliveries` | 1:N на рівні FK |
 | `routes` | `deliveries` | 1:N |
@@ -112,6 +130,8 @@ costs ──► deliveries
 | `vehicles` | `costs` | 1:N, nullable |
 
 > Важливо: SQL не встановлює `UNIQUE(order_id)` у `deliveries`, тому на рівні самої БД зв'язок `orders → deliveries` технічно є **1:N**, а не гарантованим 1:1.
+
+> **Юридична власність vs поточне закріплення ТЗ.** `vehicles.owner_client_id` — це власник/оператор транспортного засобу (юридичний факт), тоді як ланцюжок `vehicles ← drivers.default_vehicle_id ← drivers.linked_client_id` показує лише ПОТОЧНЕ закріплення конкретного водія за авто (операційний факт). Це два різні зв'язки з різним бізнес-змістом, і до 2026-09-16 прямого юридичного зв'язку "чиє це авто" в схемі не було взагалі.
 
 ---
 
@@ -290,9 +310,18 @@ idx_vat_rates_current_per_country
 - контактні дані;
 - billing address;
 - країна;
-- статус верифікації;
+- статус верифікації **+ журнал верифікації**;
 - активність;
 - timestamps.
+
+### Журнал верифікації (додано 2026-09-16)
+
+| Поле | Тип | Призначення |
+|---|---|---|
+| `verified_by` | `VARCHAR(150)` | Email/ID співробітника або системи, що верифікувала клієнта |
+| `verified_at` | `TIMESTAMPTZ` | Дата й час фактичної верифікації |
+
+До цієї зміни `is_verified` був "голим" прапорцем без аудиту: встановити, хто і коли фактично підтвердив клієнта, було неможливо.
 
 ### Бізнес-обмеження
 
@@ -302,6 +331,8 @@ idx_vat_rates_current_per_country
 - `tax_number`.
 
 Для `individual` і `solo_carrier` ця вимога не застосовується.
+
+**`CONSTRAINT chk_client_verification_log`** (додано 2026-09-16): узгоджує `is_verified` із журналом — обидва поля `verified_by`/`verified_at` мають бути або порожні одночасно (клієнт ще не верифікований), або заповнені одночасно (верифікований). Неможливо мати `is_verified = TRUE` без зафіксованого автора й часу верифікації, і навпаки.
 
 Перед вставкою або зміною `billing_country` trigger перевіряє, чи країна активна.
 
@@ -323,11 +354,22 @@ idx_vat_rates_current_per_country
 - `euro_emission_class`;
 - `tuv_inspection_expiry_date`;
 - `is_active`;
-- `is_test`.
+- `is_test`;
+- **`owner_client_id`** — додано 2026-09-16.
 
 `license_plate` має `UNIQUE`.
 
 Поля маси та вантажопідйомності мають позитивні значення.
+
+### Юридичний власник ТЗ (додано 2026-09-16)
+
+`owner_client_id VARCHAR(32) REFERENCES clients(client_id) ON UPDATE CASCADE ON DELETE SET NULL` — прямий зв'язок з юридичним власником/оператором ТЗ: компанія-перевізник (`client_type='company'`) або сам самозайнятий перевізник як власна юр. особа (`client_type='solo_carrier'`).
+
+До цієї зміни зв'язок "чиє це авто" можна було встановити лише непрямим ланцюжком `vehicles.vehicle_id ← drivers.default_vehicle_id → drivers.linked_client_id`, що показує лише поточне закріплення водія за авто, а не юридичну власність, і взагалі не працює для авто зовнішніх `carrier_company`, які не реєструють власних водіїв у `drivers`.
+
+Індекс: `idx_vehicles_owner_client_id`.
+
+> **Відома відкрита прогалина (задокументовано в SQL, §10.5):** для авто штатних водіїв (`company_employee`), у яких немає окремого `client`-запису, що представляв би саму операційну компанію-власника автопарку, `owner_client_id` лишається `NULL`. Потрібно завести такий client-запис — рішення відкладено до наступної ітерації MVP за домовленістю з власницею продукту.
 
 ---
 
@@ -338,17 +380,17 @@ idx_vat_rates_current_per_country
 Містить:
 
 - тип зайнятості;
-- прив'язку до клієнта;
+- прив'язку до клієнта (`linked_client_id`);
 - контактні дані;
 - місто базування;
 - категорії водійського посвідчення;
 - Code 95;
-- ADR;
+- ADR (`has_adr`, `adr_expiry_date`);
 - customer rating;
 - кількість відгуків;
 - service compliance rate;
 - операційний статус;
-- default vehicle.
+- default vehicle (`default_vehicle_id`).
 
 ### Узгодженість Code 95
 
@@ -357,6 +399,17 @@ idx_vat_rates_current_per_country
 ### Узгодженість ADR
 
 Якщо `has_adr = TRUE`, обов'язково має бути `adr_expiry_date`.
+
+> Це перевіряє лише внутрішню узгодженість полів усередині `drivers`. Звірку `has_adr` водія з вимогою `orders.adr_required` конкретного замовлення виконує окремий тригер — див. §8.5.
+
+### Узгодженість `driver_type` ↔ `linked_client_id` (додано 2026-09-20)
+
+`linked_client_id` тепер обов'язково має вказувати на `clients`-запис правильного типу:
+
+- `driver_type = 'self_employed'` → `linked_client_id` обов'язковий і має вказувати на `client_type = 'solo_carrier'`;
+- `driver_type = 'company_employee'` → `linked_client_id` може тимчасово бути `NULL` (водій зареєструвався, але ще не підтверджений власником компанії); якщо заданий — має вказувати на `client_type = 'company'`.
+
+Детальніше про бізнес-логіку та SQL — див. §8.6.
 
 ---
 
@@ -398,10 +451,12 @@ origin_country <> destination_country
 - Reverse Charge;
 - адреси та GPS origin/destination;
 - pickup/delivery windows;
-- cargo parameters;
+- cargo parameters, включно з `adr_required`;
 - executor;
 - двосторонні підтвердження;
 - match status.
+
+> **Перевірено (2026-09-16):** колонки `client_name` у цій таблиці ніколи не було в канонічній схемі — клієнт ідентифікується виключно через `client_id` (FK → `clients`). Дублююча колонка `client_name` існувала лише в тестовому Excel-файлі (для зручності читання людиною) і була звідти видалена.
 
 ### Просторові поля
 
@@ -430,6 +485,10 @@ match_status = both_confirmed
 ```
 
 дозволяється лише тоді, коли обидві сторони підтвердили готовність.
+
+### ADR-вантаж (`adr_required`)
+
+Якщо `adr_required = TRUE`, і виконавець — `fop_driver`, тригер `trg_validate_order_adr_compliance` (додано 2026-09-16, див. §8.5) перевіряє, що призначений водій дійсно має `drivers.has_adr = TRUE`.
 
 ### VAT
 
@@ -527,6 +586,7 @@ idx_track_points_geom
 ```text
 idx_shipment_docs_delivery   ON shipment_documents(delivery_id)
 idx_shipment_docs_status     ON shipment_documents(verification_status)
+```
 
 ---
 
@@ -602,6 +662,7 @@ other
 
 - `drivers.linked_client_id`;
 - `drivers.default_vehicle_id`;
+- `vehicles.owner_client_id` — **додано 2026-09-16**;
 - `costs.delivery_id`;
 - `costs.driver_id`;
 - `costs.vehicle_id`.
@@ -626,6 +687,14 @@ idx_clients_country_type
 ```
 
 Оптимізує фільтрацію за країною та типом клієнта.
+
+### Vehicles
+
+```text
+idx_vehicles_owner_client_id
+```
+
+Додано 2026-09-16 разом із `owner_client_id`. Оптимізує пошук усіх ТЗ конкретного власника.
 
 ### Orders
 
@@ -750,7 +819,58 @@ executor_type = fop_driver
 
 ---
 
-## 8.5. Real-time notification
+## 8.5. Перевірка ADR-відповідності виконавця (додано 2026-09-16)
+
+`trg_validate_order_adr_compliance` / `trg_before_order_adr_check`
+
+Закриває прогалину, яка раніше існувала на рівні БД: `orders.adr_required` ніяк не звірявся з `drivers.has_adr` призначеного виконавця.
+
+Побудовано за тим самим принципом, що й §8.4 (`trg_validate_order_executor`):
+
+```text
+IF adr_required = TRUE AND executor_type = 'fop_driver' AND executor_id IS NOT NULL:
+    перевірити drivers.has_adr для executor_id
+    IF has_adr IS NULL  → EXCEPTION (водія не знайдено)
+    IF has_adr = FALSE  → EXCEPTION (водій без діючого ADR-сертифіката)
+```
+
+> Перевірка спрацьовує **лише** для `executor_type = 'fop_driver'`. Для `executor_type = 'carrier_company'` перевірка НЕ виконується — платформа не реєструє водіїв/сертифікати зовнішніх компаній-перевізників (та сама архітектурна межа, що й у §8.4).
+
+Технічно перевірено на живій PostgreSQL 16 + PostGIS: сценарії "виконавець з ADR + adr_required=TRUE" (успіх), "виконавець без ADR + adr_required=TRUE" (exception), "adr_required=FALSE" (перевірка не спрацьовує), "executor_type=carrier_company" (перевірка не спрацьовує) — усі відпрацювали коректно.
+
+---
+
+## 8.6. Узгодженість `driver_type` ↔ `linked_client_id` (додано 2026-09-20)
+
+`trg_validate_driver_linked_client` / `trg_before_driver_linked_client_check`
+
+**Бізнес-проблема:** до цієї зміни `drivers.linked_client_id` міг посилатися на будь-який запис у `clients`, незалежно від його `client_type`. Нічого не заважало (помилково, вручну або багом бекенду) прив'язати самозайнятого водія до компанії або навпаки — а це два принципово різні бізнес-сценарії: самозайнятий водій (`self_employed`) сам є білінговою/юридичною стороною (сплачує податки, отримує оплату напряму, може володіти власним авто через `vehicles.owner_client_id`), тоді як найманий водій (`company_employee`) — лише виконавець, гроші й юридична відповідальність йдуть через його роботодавця.
+
+**Правило:**
+
+```text
+IF linked_client_id IS NULL:
+    IF driver_type = 'self_employed' → EXCEPTION
+       (самозайнятий водій зобов'язаний мати власний білінговий client-запис)
+    IF driver_type = 'company_employee' → дозволено (перехідний стан "ще не підтверджений власником")
+
+IF linked_client_id IS NOT NULL:
+    перевірити clients.client_type для linked_client_id
+    IF driver_type = 'self_employed'    AND client_type <> 'solo_carrier' → EXCEPTION
+    IF driver_type = 'company_employee' AND client_type <> 'company'      → EXCEPTION
+```
+
+**Чому `company_employee` дозволено реєструвати з `linked_client_id = NULL`:** за бізнес-процесом наймані водії реєструються в застосунку самостійно, а власник бізнесу вже потім підтверджує їх і надає доступ до замовлень (ця частина — керування доступом — реалізується на рівні бекенду, поза межами цієї схеми). Тому жорстка вимога `NOT NULL` для `company_employee` заблокувала б цей сценарій самостійної реєстрації. Рішення підтверджено власником продукту 2026-09-20.
+
+**Архітектурний наслідок для auth-шару (Django):** цей тригер робить непотрібним окремий FK `Client` в `DriverProfile` (auth-шар) — оскільки `drivers.linked_client_id` тепер ГАРАНТОВАНО веде на клієнта правильного типу, доступ до білінгових даних самозайнятого водія отримується через єдиний, вже наявний ланцюжок `DriverProfile.driver → Driver.linked_client_id → Client`, без дублювання зв'язку.
+
+> DB-тригер спрацьовує лише в момент запису в БД (`IntegrityError`), а не при валідації форми. Для кращого UX цю саму перевірку варто продублювати в `Driver.clean()` на рівні Django — так само, як уже задокументовано для §8.5 (ADR).
+
+Технічно перевірено на живій PostgreSQL 16 + PostGIS (8 сценаріїв): `self_employed` без `linked_client_id` (exception), `self_employed` → `solo_carrier` (успіх), `self_employed` → `company` (exception), `company_employee` без `linked_client_id` (успіх, перехідний стан), `company_employee` → `company` (успіх), `company_employee` → `solo_carrier` (exception), будь-який `driver_type` → `individual` (exception), спроба `UPDATE` коректного запису на невірний тип клієнта (exception) — усі відпрацювали коректно.
+
+---
+
+## 8.7. Real-time notification
 
 `trg_after_delivery_status_notify`
 
@@ -1142,12 +1262,14 @@ WHERE country_code = 'PL';
 - коректні delivery/order time windows;
 - VAT = 0 при Reverse Charge;
 - узгодженість Code 95;
-- узгодженість ADR;
+- узгодженість ADR (`drivers.has_adr` ↔ `drivers.adr_expiry_date`);
+- **узгодженість журналу верифікації клієнта** (`clients.is_verified` ↔ `verified_by`/`verified_at`) — додано 2026-09-16;
 - `is_repair` тільки для maintenance;
 - дозволені значення `cost_subtype`;
 - `both_confirmed` тільки при двох підтвердженнях;
 - активність країни;
-- існування FOP driver при відповідному executor type.
+- існування FOP driver при відповідному executor type;
+- **відповідність `adr_required` замовлення й `has_adr` призначеного FOP-водія** — додано 2026-09-16.
 
 ---
 
@@ -1209,6 +1331,18 @@ origin_country <> destination_country
 
 Application layer або окремий trigger повинен забезпечувати актуалізацію поля.
 
+### 18.6. `vehicles.owner_client_id` не покриває всі авто (додано 2026-09-16)
+
+Для авто штатних водіїв (`driver_type='company_employee'`), у яких немає окремого `client`-запису, що представляв би саму операційну компанію-власника автопарку, `owner_client_id` лишається `NULL`. Потрібно завести такий client-запис — рішення відкладено до наступної ітерації MVP.
+
+### 18.7. Немає DB-рівневої перевірки протермінованості документів (додано 2026-09-16)
+
+У `drivers` немає перевірки на рівні БД, чи не протермінувалися `driving_license_expiry_date`, `code_95_expiry_date`, `adr_expiry_date` відносно поточної дати — є лише CHECK-и на парність полів (наприклад, "якщо є `has_adr=TRUE`, то є і `adr_expiry_date`"), а не на актуальність самої дати. Це потрібно реалізовувати або окремим scheduled-job на backend, або окремою DB-перевіркою в наступній ітерації.
+
+### 18.8. Немає довідника тарифів LKW-Maut (додано 2026-09-16)
+
+Відсутня таблиця `toll_rates` (за `euro_emission_class` і `gross_vehicle_weight_kg`), потрібна для точного розрахунку дорожніх зборів у Німеччині.
+
 ---
 
 ## 19. Deployment sequence
@@ -1216,7 +1350,7 @@ Application layer або окремий trigger повинен забезпеч�
 DDL рекомендується виконувати як єдиний schema script:
 
 ```bash
-psql -U postgres -d smartlog_db -f 01_smartlog_core_mvp_marketplace_schema.sql
+psql -U postgres -d smartlog_db -f 001_smartlog_core_mvp_marketplace_schema.sql
 ```
 
 Логічний порядок побудови:
@@ -1226,8 +1360,8 @@ psql -U postgres -d smartlog_db -f 01_smartlog_core_mvp_marketplace_schema.sql
 2. ENUM types
 3. supported_countries
 4. vat_rates
-5. clients
-6. vehicles
+5. clients (з журналом верифікації)
+6. vehicles (з owner_client_id)
 7. drivers
 8. routes
 9. orders
@@ -1236,12 +1370,14 @@ psql -U postgres -d smartlog_db -f 01_smartlog_core_mvp_marketplace_schema.sql
 12. shipment_documents
 13. costs
 14. indexes
-15. triggers/functions
+15. triggers/functions (включно з ADR compliance check)
 16. spatial functions
 17. analytical views
 18. Smart Skip Engine
 19. staging_costs
 ```
+
+> Файл `001_smartlog_core_mvp_marketplace_schema.sql` є **єдиним актуальним скриптом створення бази даних** і повністю замінює `01_smartlog_core_mvp_marketplace_schema.sql`. Усі зміни, що раніше постачались окремим ALTER-патчем, тепер вбудовані напряму в `CREATE TABLE` — на новій, порожній базі достатньо виконати один цей файл, щоб одразу отримати фінальну структуру без застосування додаткових патчів.
 
 ---
 
@@ -1284,15 +1420,17 @@ Application layer відповідає за API, authentication/authorization, U
 
 ## 21. Підсумок
 
-`01_smartlog_core_mvp_marketplace_schema.sql` формує ядро SmartLog Europe навколо п'яти основних доменів:
+`001_smartlog_core_mvp_marketplace_schema.sql` формує ядро SmartLog Europe навколо п'яти основних доменів:
 
-1. **Marketplace** — `clients`, `orders`, matching.
-2. **Fleet & Drivers** — `drivers`, `vehicles`.
+1. **Marketplace** — `clients` (з журналом верифікації), `orders`, matching.
+2. **Fleet & Drivers** — `drivers`, `vehicles` (з юридичним власником `owner_client_id`).
 3. **Logistics Execution** — `routes`, `deliveries`, GPS tracking.
-4. **Compliance & Documents** — VAT, incidents, ratings, e-CMR/e-POD.
+4. **Compliance & Documents** — VAT, ADR-відповідність виконавця, incidents, ratings, e-CMR/e-POD.
 5. **Financial Analytics** — `costs` та profitability / income views.
 
-Схема вже містить PostGIS, spatial indexes, triggers, real-time `NOTIFY`, 90-day driver compliance calculation та live analytical views. Водночас частина orchestration logic залишається на backend-рівні, що важливо враховувати під час реалізації FastAPI сервісів і API.
+Схема вже містить PostGIS, spatial indexes, triggers (включно з перевіркою ADR-відповідності виконавця), real-time `NOTIFY`, 90-day driver compliance calculation та live analytical views. Водночас частина orchestration logic залишається на backend-рівні, що важливо враховувати під час реалізації FastAPI сервісів і API.
+
+Список відомих відкритих прогалин поточної ревізії — §18.6–§18.8.
 
 ---
 
@@ -1301,7 +1439,9 @@ Application layer відповідає за API, authentication/authorization, U
 Цей документ є технічною документацією до конкретного SQL-файлу:
 
 ```text
-01_smartlog_core_mvp_marketplace_schema.sql
+001_smartlog_core_mvp_marketplace_schema.sql
 ```
+
+Цей файл повністю замінює собою попередню версію `01_smartlog_core_mvp_marketplace_schema.sql`.
 
 Якщо SQL-схема змінюється, `DATABASE_SCHEMA.md` необхідно синхронізувати з DDL, щоб документація залишалася source-aligned.
