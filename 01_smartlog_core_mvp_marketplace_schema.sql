@@ -297,25 +297,25 @@ CREATE TABLE drivers (
     )
 );
 
--- 3.4. Route Corridors with Planned PostGIS Geometry (routes)
-CREATE TABLE routes (
-    route_id             VARCHAR(32) PRIMARY KEY,                        -- RT-#####
-    route_name           VARCHAR(150),                                   -- e.g. 'München -> Nürnberg via A9'
-    -- [2026-09-23] NULL дозволено: MVP-логіка PM не малює реальний маршрут
-    -- на мапі ("не малюємо складні карти з машинками") — бекенду достатньо
-    -- писати planned_distance_km (введена вручну/оцінена по прямій) і точки
-    -- delivery_track_points при натисканні кнопок водієм. Геометрія
-    -- заповнюється пізніше, коли з'явиться модуль побудови маршруту.
-    -- Функція is_route_deviated() (розділ 6.2) вже коректно обробляє NULL.
-    planned_geometry     GEOMETRY(LineString, 4326),                    -- Planned spatial line (WGS 84); NULL до впровадження route-планування
-    planned_distance_km  NUMERIC(8,2) NOT NULL CHECK (planned_distance_km > 0),
-    origin_country       CHAR(2) REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
-    destination_country  CHAR(2) REFERENCES supported_countries(country_code) ON UPDATE CASCADE,
-    is_cross_border      BOOLEAN GENERATED ALWAYS AS (origin_country <> destination_country) STORED,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+-- [2026-09-23, ВИПРАВЛЕННЯ] Окрема таблиця routes (планові PostGIS-коридори,
+-- planned_geometry, planned_distance_km, origin/destination_country,
+-- is_cross_border) ВИДАЛЕНА — це було зайве дублювання: маршрут і геодані
+-- вже повністю фіксуються на боці deliveries/orders:
+--   - deliveries.planned_distance_km / actual_distance_km — планова й
+--     фактична відстань КОНКРЕТНОГО рейсу (це головне джерело правди,
+--     не довідник коридору);
+--   - orders.origin_location / destination_location — GPS-точки забору й
+--     вивантаження (PostGIS Point);
+--   - delivery_track_points — реальний GPS-трек під час рейсу;
+--   - orders.origin_country / destination_country — вже використовуються
+--     для крос-кордонної VAT-логіки (trg_set_order_vat_rate), is_cross_border
+--     на рівні routes був точним дублікатом цієї ж перевірки.
+-- route_id лишається на deliveries як звичайний довідниковий код
+-- (RT-#####) без окремої FK-таблиці — один менший JOIN-вузол менше на
+-- кожен запит v_deliveries_analytics і менше індексів для підтримки при
+-- зростанні кількості користувачів/рейсів.
 
--- 3.5. Orders with Spatial Points & Two-Sided Matching (orders)
+-- 3.4. Orders with Spatial Points & Two-Sided Matching (orders)
 CREATE TABLE orders (
     order_id                    VARCHAR(32) PRIMARY KEY,                 -- SL-YYYY-######
     order_date                  DATE NOT NULL,
@@ -380,11 +380,16 @@ CREATE TABLE orders (
     -- Ім'я клієнта завжди отримується через JOIN clients ON orders.client_id = clients.client_id.
 );
 
--- 3.6. Physical Deliveries Execution (deliveries)
+-- 3.5. Physical Deliveries Execution (deliveries)
 CREATE TABLE deliveries (
     delivery_id                 VARCHAR(32) PRIMARY KEY,                 -- DL-YYYY-######
     order_id                    VARCHAR(32) NOT NULL REFERENCES orders(order_id) ON UPDATE CASCADE,
-    route_id                    VARCHAR(32) NOT NULL REFERENCES routes(route_id) ON UPDATE CASCADE,
+    -- [2026-09-23, ВИПРАВЛЕННЯ] route_id — плоский довідниковий код коридору
+    -- (RT-#####), БЕЗ FK на окрему таблицю routes (таблицю видалено — див.
+    -- коментар перед §3.4 вище). Планова/фактична відстань і геодані рейсу
+    -- вже тут же нижче (planned_distance_km, actual_distance_km) та в
+    -- orders.origin/destination_location + delivery_track_points.
+    route_id                    VARCHAR(32) NOT NULL,                    -- RT-#####
     driver_id                   VARCHAR(32) REFERENCES drivers(driver_id) ON UPDATE CASCADE,
     vehicle_id                  VARCHAR(32) REFERENCES vehicles(vehicle_id) ON UPDATE CASCADE,
     delivery_status             delivery_status_enum NOT NULL DEFAULT 'planned',
@@ -411,7 +416,7 @@ CREATE TABLE deliveries (
     CONSTRAINT chk_delivery_time_window CHECK (planned_end_time > planned_start_time)
 );
 
--- 3.7. Live Telematics & GPS Track Points (delivery_track_points)
+-- 3.6. Live Telematics & GPS Track Points (delivery_track_points)
 CREATE TABLE delivery_track_points (
     track_point_id  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     delivery_id     VARCHAR(32) NOT NULL REFERENCES deliveries(delivery_id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -420,7 +425,7 @@ CREATE TABLE delivery_track_points (
     speed_kmh       NUMERIC(5,2)
 );
 
--- 3.8. Electronic Documentation & File URLs Metadata (shipment_documents)
+-- 3.7. Electronic Documentation & File URLs Metadata (shipment_documents)
 -- NOTE: Physical files (PDF, JPG, PNG) are stored in S3/MinIO. PostgreSQL stores only URLs / Object Keys.
 CREATE TABLE shipment_documents (
     document_id                 VARCHAR(32) PRIMARY KEY,                 -- DOC-YYYY-######
@@ -440,7 +445,7 @@ CREATE TABLE shipment_documents (
     updated_at                     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3.9. Operating & Vehicle Costs (costs)
+-- 3.8. Operating & Vehicle Costs (costs)
 CREATE TABLE costs (
     cost_id             VARCHAR(32) PRIMARY KEY,                         -- CS-YYYY-######
     cost_date           DATE NOT NULL,
@@ -475,7 +480,7 @@ CREATE TABLE costs (
     )
 );
 
--- 3.10. [2026-09-23] Fraud/Trust Complaints (fraud_reports) — PM spec §6.2
+-- 3.9. [2026-09-23] Fraud/Trust Complaints (fraud_reports) — PM spec §6.2
 -- "Саморегуляція біржі": клієнт натискає "Повідомити про шахрайство" на
 -- водієві. НЕ для скарг на замовників і НЕ для захисту від зовнішніх атак
 -- (підбір паролів, DDoS, сканування) — це інфраструктурне питання, свідомо
@@ -510,9 +515,6 @@ CREATE INDEX idx_orders_match_status ON orders(match_status) WHERE match_status 
 CREATE INDEX idx_orders_origin_loc ON orders USING GIST(origin_location);
 CREATE INDEX idx_orders_dest_loc ON orders USING GIST(destination_location);
 CREATE INDEX idx_orders_client_tracking ON orders(client_id, order_date DESC, order_id);
-
-CREATE INDEX idx_routes_geometry ON routes USING GIST(planned_geometry);
-CREATE INDEX idx_routes_cross_border ON routes(is_cross_border);
 
 CREATE INDEX idx_deliveries_order_id ON deliveries(order_id);
 CREATE INDEX idx_deliveries_route_id ON deliveries(route_id);
@@ -754,35 +756,12 @@ RETURNS GEOMETRY AS $$
     WHERE delivery_id = p_delivery_id;
 $$ LANGUAGE sql STABLE;
 
--- 6.2. Evaluate Substantial Route Deviation (Geography Metric Distance)
-CREATE OR REPLACE FUNCTION is_route_deviated(
-    p_delivery_id VARCHAR,
-    p_threshold_meters NUMERIC DEFAULT 2000
-) RETURNS BOOLEAN AS $$
-DECLARE
-    v_actual   GEOMETRY;
-    v_planned  GEOMETRY;
-    v_max_dist NUMERIC;
-BEGIN
-    v_actual := build_actual_route_geometry(p_delivery_id);
-
-    SELECT r.planned_geometry INTO v_planned
-    FROM deliveries d
-    JOIN routes r ON r.route_id = d.route_id
-    WHERE d.delivery_id = p_delivery_id;
-
-    IF v_actual IS NULL OR v_planned IS NULL THEN
-        RETURN NULL;
-    END IF;
-
-    SELECT MAX(ST_Distance(pt.location::geography, v_planned::geography))
-    INTO v_max_dist
-    FROM delivery_track_points pt
-    WHERE pt.delivery_id = p_delivery_id;
-
-    RETURN v_max_dist > p_threshold_meters;
-END;
-$$ LANGUAGE plpgsql STABLE;
+-- [2026-09-23, ВИПРАВЛЕННЯ] Функцію is_route_deviated() видалено разом з
+-- таблицею routes (вона порівнювала фактичний трек саме з
+-- routes.planned_geometry, якої більше немає). "Відхилення від маршруту"
+-- у поточній MVP-логіці фіксує сам водій/бекенд через
+-- incident_type = 'Driver_Route_Deviation' (§4.3 deliveries), а не окрема
+-- геометрична перевірка — це той самий сигнал, без зайвого PostGIS-навантаження.
 
 -- ----------------------------------------------------------------------------
 -- 7. LIVE ANALYTICAL VIEWS (ZERO-LAG OPERATIONAL REPORTING)
@@ -794,7 +773,6 @@ SELECT
     d.delivery_id,
     d.order_id,
     d.route_id,
-    r.route_name,
     d.driver_id,
     d.vehicle_id,
     d.delivery_status,
@@ -817,8 +795,7 @@ SELECT
     d.customer_rating_stars,
     d.proof_of_delivery_url,
     d.is_test
-FROM deliveries d
-JOIN routes r ON d.route_id = r.route_id;
+FROM deliveries d;
 
 -- 7.2. Live Customer Order Tracking View
 CREATE OR REPLACE VIEW v_customer_order_tracking AS

@@ -440,44 +440,10 @@ class Driver(models.Model):
     # ------------------------------------------------------------------
 
 
-class Route(models.Model):
-    route_id = models.CharField(max_length=32, primary_key=True, help_text="RT-#####")
-    route_name = models.CharField(max_length=150, null=True, blank=True)
-    # [2026-09-23] NULL дозволено: MVP-логіка ТЗ PM не малює реальний
-    # маршрут на мапі — досить planned_distance_km і точок delivery_track_points
-    # при натисканні кнопок водієм. Було LineStringField() без null=True.
-    planned_geometry = models.LineStringField(srid=4326, null=True, blank=True)
-    planned_distance_km = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0.01)])
-    origin_country = models.ForeignKey(
-        SupportedCountry,
-        on_delete=models.RESTRICT,
-        related_name='routes_origin',
-        db_column='origin_country'
-    )
-    destination_country = models.ForeignKey(
-        SupportedCountry,
-        on_delete=models.RESTRICT,
-        related_name='routes_destination',
-        db_column='destination_country'
-    )
-    is_cross_border = models.GeneratedField(
-        expression=~models.Q(origin_country=models.F('destination_country')),
-        output_field=models.BooleanField(),
-        db_persist=True
-    )
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        db_table = 'routes'
-        indexes = [
-            models.Index(fields=['is_cross_border'], name='idx_routes_cross_border'),
-        ]
-        constraints = [
-            models.CheckConstraint(check=models.Q(planned_distance_km__gt=0), name='chk_route_distance_positive')
-        ]
-
-    def __str__(self):
-        return f"{self.route_id} - {self.route_name}"
+# [2026-09-23, ВИПРАВЛЕННЯ] Модель Route видалена разом з таблицею routes —
+# дублювала дані, які вже є в Delivery (planned/actual_distance_km) та Order
+# (origin/destination_location, origin/destination_country). Delivery.route_id
+# нижче — звичайний CharField (RT-#####), без FK.
 
 
 class Order(models.Model):
@@ -589,7 +555,10 @@ class Order(models.Model):
 class Delivery(models.Model):
     delivery_id = models.CharField(max_length=32, primary_key=True, help_text="DL-YYYY-######")
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='deliveries', db_column='order_id')
-    route = models.ForeignKey(Route, on_delete=models.RESTRICT, related_name='deliveries', db_column='route_id')
+    # [2026-09-23, ВИПРАВЛЕННЯ] Плоский довідниковий код маршруту (RT-#####),
+    # без FK на окрему таблицю routes (видалена — дублювала planned_distance_km
+    # і geo-дані, які вже є тут і в Order).
+    route_id = models.CharField(max_length=32, help_text="RT-##### — код маршрутного коридору")
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True, related_name='deliveries', db_column='driver_id')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, related_name='deliveries', db_column='vehicle_id')
     delivery_status = models.CharField(max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PLANNED)
@@ -623,7 +592,7 @@ class Delivery(models.Model):
         db_table = 'deliveries'
         indexes = [
             models.Index(fields=['order'], name='idx_deliveries_order_id'),
-            models.Index(fields=['route'], name='idx_deliveries_route_id'),
+            models.Index(fields=['route_id'], name='idx_deliveries_route_id'),
             models.Index(fields=['driver', 'delivery_status'], name='idx_deliveries_driver_status'),
             models.Index(fields=['vehicle', 'delivery_status'], name='idx_deliveries_vehicle_status'),
             models.Index(fields=['actual_end_time'], name='idx_deliveries_actual_end'),
